@@ -1,0 +1,127 @@
+![](./assets/logo.jpg)
+
+# Hive Agent Kit
+
+This library provides you with an easy way to create and run Hive Agents.
+
+
+## Project Requirements
+- Python >= 3.11
+
+[//]: # (## Installation)
+
+[//]: # (```)
+
+[//]: # ($ pip install hive-agent)
+
+[//]: # (```)
+
+## Environment Setup
+You need to specify an `OPENAI_API_KEY` in a _.env_ file in this directory.
+
+Make a copy of the [.env.example](.env.example) file and rename it to _.env_.
+
+
+## Usage
+
+First import the `HiveAgent` class
+```python
+from hive_agent import HiveAgent
+```
+
+Load your environment variables
+```python
+from dotenv import load_dotenv
+load_dotenv()
+```
+
+Then create a HiveAgent instance
+```python
+my_agent = HiveAgent(
+    name="my_agent",
+    functions=[]
+)
+```
+
+Then, run your agent:
+```
+my_agent.run()
+```
+
+Finally, call the API endpoint, `/api/chat`, to see the result:
+
+```
+curl --location 'localhost:8000/api/chat' \
+--header 'Content-Type: application/json' \
+--data '{ "messages": [{ "role": "user", "content": "Who is Satoshi Nakamoto?" }] }'
+```
+
+### Adding tools
+You can create tools that help your agent handle more complex tasks. Here's an example:
+
+```python
+import os
+from typing import Optional, Dict
+
+from web3 import Web3
+from hive_agent import HiveAgent
+
+from dotenv import load_dotenv
+load_dotenv()
+
+
+rpc_url = os.getenv("RPC_URL") # add an ETH Mainnet HTTP RPC URL to your `.env` file
+
+
+def get_transaction_receipt(transaction_hash: str) -> Optional[Dict]:
+    """
+    Fetches the receipt of a specified transaction on the Ethereum blockchain and returns it as a dictionary.
+
+    :param transaction_hash: The hash of the transaction to fetch the receipt for.
+    :return: A dictionary containing the transaction receipt details, or None if the transaction cannot be found.
+    """
+    web3 = Web3(Web3.HTTPProvider(rpc_url))
+
+    if not web3.is_connected():
+        print("unable to connect to Ethereum")
+        return None
+
+    try:
+        transaction_receipt = web3.eth.get_transaction_receipt(transaction_hash)
+        return dict(transaction_receipt)
+    except Exception as e:
+        print(f"an error occurred: {e}")
+        return None
+
+
+if __name__ == "__main__":
+    my_agent = HiveAgent(
+        name="my_agent",
+        functions=[get_transaction_receipt]
+    )
+    
+    my_agent.run()
+
+    """
+    [1] send a request:
+    
+    ```
+    curl --location 'localhost:8000/api/chat' \
+    --header 'Content-Type: application/json' \
+    --data '{ "messages": [{ "role": "user", "content": "Which address initiated this transaction - 0x5c504ed432cb51138bcf09aa5e8a410dd4a1e204ef84bfed1be16dfba1b22060?" }] }'
+    ```
+    
+    
+    [2] result:
+    
+    The address that initiated the transaction with hash 0x5c504ed432cb51138bcf09aa5e8a410dd4a1e204ef84bfed1be16dfba1b22060 is 0xA1E4380A3B1f749673E270229993eE55F35663b4.
+    """
+```
+
+## API Doc
+
+Open [http://localhost:8000/docs](http://localhost:8000/docs) with your browser to see the Swagger UI of the API.
+
+## Learn More
+
+https://hivenetwork.ai

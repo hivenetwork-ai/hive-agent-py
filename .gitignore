@@ -1,0 +1,14 @@
+__pycache__
+
+storage
+
+.env
+venv
+
+**/*.egg-info
+build
+
+.idea
+.vscode
+
+.DS_Store
