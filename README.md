@@ -8,13 +8,16 @@ This library provides you with an easy way to create and run Hive Agents.
 ## Project Requirements
 - Python >= 3.11
 
-[//]: # (## Installation)
+## Installation
 
-[//]: # (```)
-
-[//]: # ($ pip install hive-agent)
-
-[//]: # (```)
+You can either directly install from pip:
+```
+$ pip install git+https://github.com/hivenetwork-ai/hive-agent-py.git@main
+```
+Or add it to your _requirements.txt_ file:
+```
+hive-agent @ git+https://github.com/hivenetwork-ai/hive-agent-py@main
+```
 
 ## Environment Setup
 You need to specify an `OPENAI_API_KEY` in a _.env_ file in this directory.
@@ -39,7 +42,8 @@ Then create a HiveAgent instance
 ```python
 my_agent = HiveAgent(
     name="my_agent",
-    functions=[]
+    functions=[],
+    instruction="your instructions for this agent's goal",
 )
 ```
 
@@ -117,6 +121,62 @@ if __name__ == "__main__":
     The address that initiated the transaction with hash 0x5c504ed432cb51138bcf09aa5e8a410dd4a1e204ef84bfed1be16dfba1b22060 is 0xA1E4380A3B1f749673E270229993eE55F35663b4.
     """
 ```
+
+### Saving Data on the Agent
+TODO
+
+## Contributing
+
+### Setup
+
+If you want to contribute to the codebase, you would need to setup your dev environment. Follow these steps:
+
+- Create a new file called .env
+- Copy the contents of [.env.example](.env.example) into your new .env file
+- API keys for third party tools are not provided.
+  - `OPENAI_API_KEY` from OpenAI
+- Create a virtual Python environment
+```
+$ python -m venv ./venv
+```
+- Activate the Python virtual env.
+  - Windows:
+    - In cmd.exe: `venv\Scripts\activate.bat`
+    - In PowerShell: `venv\Scripts\Activate.ps1`
+  - Unix: `source venv/bin/activate`
+- Install dependencies.
+```
+$ pip install -r requirements.txt
+```
+- Finally, install the dev requirements:
+```
+$ pip install -r requirements-dev.txt
+```
+- **Bonus**: If you want to use a local version of this SDK with an agent being built with it:
+```
+# requirements.txt
+-e /path/to/hive-agent-py
+```
+
+### Testing
+
+- Run the test suite
+```
+$ pytest
+```
+- Run tests for a specific module
+```
+$ pytest tests/path/to/test_module.py
+```
+- Run with verbose output:
+```
+$ pytest -v
+```
+- Run with a detailed output of each test (including print statements):
+```
+$ pytest -s
+```
+
 
 ## API Doc
 

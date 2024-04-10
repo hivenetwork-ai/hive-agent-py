@@ -1,19 +1,26 @@
-from fastapi import FastAPI, HTTPException, Request, status
+from typing import List
+
+from fastapi import HTTPException, Request, status
 from fastapi.responses import StreamingResponse
-from llama_index.agent.openai import OpenAIAgent
-from llama_index.core.llms import ChatMessage, MessageRole
+from llama_index.core.llms import ChatMessage
+from llama_index.core.llms import MessageRole
 
-from hive_agent.api_models import ChatData
+from pydantic import BaseModel
 
 
-def setup_routes(app: FastAPI, agent: OpenAIAgent):
-    @app.get("/")
-    def read_root():
-        return "Hive Agent is running"
+class Message(BaseModel):
+    role: MessageRole
+    content: str
+
+
+class ChatData(BaseModel):
+    messages: List[Message]
+
+
+def setup_chat_routes(app, agent):
 
     @app.post("/api/chat")
-    async def handle_chat(request: Request, data: ChatData):
-        # check preconditions and get last message
+    async def chat(request: Request, data: ChatData):
         if len(data.messages) == 0:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -28,21 +35,11 @@ def setup_routes(app: FastAPI, agent: OpenAIAgent):
             )
 
         # convert messages coming from the request to type ChatMessage
-        messages = [
-            ChatMessage(
-                role=m.role,
-                content=m.content,
-            )
-            for m in data.messages
-        ]
-
-        # query chat engine
+        messages = [ChatMessage(role=m.role, content=m.content) for m in data.messages]
         response = await agent.astream_chat(last_message.content, messages)
 
-        # stream response
         async def event_generator():
             async for token in response.async_response_gen():
-                # if client closes connection, stop sending events
                 if await request.is_disconnected():
                     break
                 yield token
