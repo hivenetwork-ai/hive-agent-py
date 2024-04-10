@@ -20,7 +20,7 @@ from hive_agent.wallet import WalletStore
 
 load_dotenv()
 
-logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
+logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 logging.getLogger().addHandler(logging.StreamHandler(stream=sys.stdout))
 
 
