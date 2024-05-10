@@ -1,7 +1,7 @@
-from threading import Thread
+import signal
 
 import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 from hive_agent.agent import HiveAgent
 
@@ -11,9 +11,8 @@ def agent():
     with patch('hive_agent.agent.OpenAIAgent'), \
             patch('hive_agent.agent.WalletStore'), \
             patch('hive_agent.agent.setup_routes'), \
-            patch('uvicorn.run'), \
-            patch('hive_agent.agent.signal.signal'):
-        return HiveAgent(
+            patch('uvicorn.Server.serve', new_callable=MagicMock):
+        agent = HiveAgent(
             name='TestAgent',
             functions=[lambda x: x],
             host='0.0.0.0',
@@ -21,9 +20,11 @@ def agent():
             instruction='Test instruction',
             db_url='sqlite+aiosqlite:///hive_agent.db'
         )
+    return agent
 
 
-def test_agent_initialization(agent):
+@pytest.mark.asyncio
+async def test_agent_initialization(agent):
     assert agent.name == 'TestAgent'
     assert agent.host == '0.0.0.0'
     assert agent.port == 8000
@@ -36,40 +37,23 @@ def test_server_setup(agent):
         mock_setup_routes.assert_called_once()
 
 
-def test_run_server(agent):
-    with patch('uvicorn.run') as mock_run:
-        agent.run_server()
-        mock_run.assert_called_once()
+@pytest.mark.asyncio
+async def test_run_server(agent):
+    with patch('uvicorn.Server.serve', new_callable=MagicMock) as mock_serve:
+        await agent.run_server()
+        mock_serve.assert_called_once()
 
 
-def test_signal_handler():
-    with patch('hive_agent.agent.signal.signal') as mock_signal, \
-         patch('hive_agent.agent.OpenAIAgent'), \
-         patch('hive_agent.agent.WalletStore'), \
-         patch('hive_agent.agent.setup_routes'), \
-         patch('uvicorn.run'):
-        agent_instance = HiveAgent(
-            name='TestAgent',
-            functions=[lambda x: x],
-            host='0.0.0.0',
-            port=8000,
-            instruction='Test instruction',
-            db_url='sqlite+aiosqlite:///hive_agent.db'
-        )
-        agent_instance.shutdown_event = MagicMock()
-
-        thread = Thread(target=agent_instance.run)
-        thread.start()
-        thread.join(timeout=2)  # timeout necessary to allow signal setup
-
-        # check if signal.signal was called at least twice (for SIGINT and SIGTERM)
-        assert mock_signal.call_count >= 2
-
-        # cleanup
-        agent_instance.shutdown_event.set()
+def test_signal_handler(agent):
+    agent.shutdown_event = MagicMock()
+    agent.shutdown_procedures = MagicMock()
+    with patch('asyncio.create_task') as mock_create_task:
+        agent._HiveAgent__signal_handler(signal.SIGINT, None)
+        mock_create_task.assert_called_once_with(agent.shutdown_procedures())
 
 
-def test_cleanup(agent):
+@pytest.mark.asyncio
+async def test_cleanup(agent):
     agent.db_session = MagicMock()
-    agent._HiveAgent__cleanup()
+    await agent._HiveAgent__cleanup()
     agent.db_session.close.assert_called_once()

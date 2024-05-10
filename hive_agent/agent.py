@@ -1,22 +1,24 @@
+import asyncio
 import logging
 import os
 import signal
 import sys
 import uvicorn
 
-from threading import Thread, Event
 from typing import Callable, List
 
-from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
 from llama_index.agent.openai import OpenAIAgent
 from llama_index.core.llms import ChatMessage
 from llama_index.core.tools import FunctionTool
 
-from hive_agent.server.routes import setup_routes
 from hive_agent.llm_settings import init_llm_settings
+from hive_agent.server.routes import setup_routes
 from hive_agent.wallet import WalletStore
+
+from dotenv import load_dotenv
 
 load_dotenv()
 
@@ -27,7 +29,6 @@ logging.getLogger().addHandler(logging.StreamHandler(stream=sys.stdout))
 class HiveAgent:
     name: str
     wallet_store: WalletStore
-
     __agent: OpenAIAgent
 
     def __init__(
@@ -44,7 +45,7 @@ class HiveAgent:
         self.host = host
         self.port = port
         self.app = FastAPI()
-        self.shutdown_event = Event()
+        self.shutdown_event = asyncio.Event()
         self.instruction = instruction
 
         self.__setup(db_url)
@@ -64,7 +65,7 @@ class HiveAgent:
             the most appropriate/relevant function tool to answer the original question in the user's prompt and comment
             on any provided data from the user or from the function result. Whenever you use a tool, explain your answer
             based on the tool result.
-            
+
             Here is your domain-specific instruction:
             {self.instruction}
             """
@@ -98,20 +99,22 @@ class HiveAgent:
                 allow_headers=["*"],
             )
 
-    def run_server(self):
+    async def run_server(self):
         try:
-            uvicorn.run(app=self.app, host=self.host, port=self.port)
+            config = uvicorn.Config(app=self.app, host=self.host, port=self.port, loop="asyncio")
+            server = uvicorn.Server(config)
+            await server.serve()
         except Exception as e:
-            logging.error(f"server error: {e}")
+            logging.error(f"unexpected error while running the server: {e}", exc_info=True)
         finally:
-            self.shutdown_event.set()
-            self.__cleanup()
+            await self.__cleanup()
 
     def run(self):
-        thread = Thread(target=self.run_server)
-        thread.daemon = True
-        thread.start()
-        self.shutdown_event.wait()
+        try:
+            loop = asyncio.get_event_loop()
+            loop.run_until_complete(self.run_server())
+        except Exception as e:
+            logging.error(f"An error occurred in the main event loop: {e}", exc_info=True)
 
     def chat_history(self) -> List[ChatMessage]:
         return self.__agent.chat_history
@@ -121,15 +124,24 @@ class HiveAgent:
         return [FunctionTool.from_defaults(fn=func) for func in funcs]
 
     def __signal_handler(self, signum, frame):
-        logging.debug("signal received, shutting down...")
+        logging.info(f"signal {signum} received, initiating graceful shutdown...")
+        asyncio.create_task(self.shutdown_procedures())
+
+    async def shutdown_procedures(self):
+        # attempt to complete or cancel all running tasks
+        tasks = [t for t in asyncio.all_tasks() if t is not asyncio.current_task()]
+        [task.cancel() for task in tasks]
+
+        await asyncio.gather(*tasks, return_exceptions=True)
         self.shutdown_event.set()
+        logging.info("all tasks have been cancelled or completed")
 
-    def __cleanup(self):
-        logging.debug("performing cleanup...")
-
-        # close database connections
-        if hasattr(self, 'db_session'):
-            self.db_session.close()
-            logging.debug("Database connection closed")
-
-        logging.debug("cleanup completed successfully")
+    async def __cleanup(self):
+        try:
+            if hasattr(self, 'db_session'):
+                await self.db_session.close()
+                logging.debug("database connection closed")
+        except Exception as e:
+            logging.error(f"error during cleanup: {e}", exc_info=True)
+        finally:
+            logging.info("cleanup process completed")
