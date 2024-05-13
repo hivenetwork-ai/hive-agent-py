@@ -7,7 +7,7 @@ from sqlalchemy.future import select
 
 from hive_agent.store import DataEntry
 
-logging.basicConfig(stream=sys.stdout, level=logging.INFO)
+logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 logging.getLogger().addHandler(logging.StreamHandler(stream=sys.stdout))
 
 class Store:
@@ -21,21 +21,21 @@ class Store:
             session.add(new_entry)
             await session.commit()
             await session.refresh(new_entry)
-            logging.info(f"Added new entry: {new_entry.id} in namespace {namespace}")
+            logging.debug(f"Added new entry: {new_entry.id} in namespace {namespace}")
             return new_entry
 
     async def get(self, namespace):
         async with self.session_factory() as session:
             stmt = select(DataEntry).where(DataEntry.namespace == namespace)
             result = await session.execute(stmt)
-            logging.info(f"Retrieved entries for namespace {namespace}")
+            logging.debug(f"Retrieved entries for namespace {namespace}")
             return result.scalars().all()
 
     async def get_by_id(self, namespace, entry_id):
         async with self.session_factory() as session:
             stmt = select(DataEntry).where(DataEntry.id == entry_id, DataEntry.namespace == namespace)
             result = await session.execute(stmt)
-            logging.info(f"Retrieved entry by ID {entry_id} for namespace {namespace}")
+            logging.debug(f"Retrieved entry by ID {entry_id} for namespace {namespace}")
             return result.scalars().first()
 
     async def update(self, namespace, entry_id, new_data):
@@ -45,7 +45,7 @@ class Store:
                 .where(DataEntry.id == entry_id, DataEntry.namespace == namespace)
                 .values(new_data)
             )
-            logging.info(f"Updated entry {entry_id} in namespace {namespace}")
+            logging.debug(f"Updated entry {entry_id} in namespace {namespace}")
             await session.execute(stmt)
             await session.commit()
 
@@ -55,6 +55,6 @@ class Store:
                 delete(DataEntry)
                 .where(DataEntry.id == entry_id, DataEntry.namespace == namespace)
             )
-            logging.info(f"Deleted entry {entry_id} from namespace {namespace}")
+            logging.debug(f"Deleted entry {entry_id} from namespace {namespace}")
             await session.execute(stmt)
             await session.commit()
