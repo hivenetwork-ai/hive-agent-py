@@ -13,7 +13,7 @@ from eth_account.datastructures import SignedMessage
 from eth_account.signers.local import LocalAccount
 from eth_account.messages import encode_defunct
 
-logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
+logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 logging.getLogger().addHandler(logging.StreamHandler(stream=sys.stdout))
 
 logging.basicConfig(stream=sys.stdout, level=logging.INFO)
