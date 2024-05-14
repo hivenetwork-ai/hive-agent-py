@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, APIRouter
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 from llama_index.agent.openai import OpenAIAgent
@@ -22,5 +22,9 @@ def setup_routes(app: FastAPI, agent: OpenAIAgent, db_url: str):
     def read_root():
         return "Hive Agent is running"
 
-    setup_chat_routes(app, agent)
-    setup_entry_routes(app, store)
+    v1 = APIRouter()
+
+    setup_chat_routes(v1, agent)
+    setup_entry_routes(v1, store)
+
+    app.include_router(v1, prefix="/api/v1")

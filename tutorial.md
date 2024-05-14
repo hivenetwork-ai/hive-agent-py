@@ -4,7 +4,7 @@ After starting the Hive Agent server with `agent.run()`, the following endpoints
 
 ## Chat Endpoint
 
-### **POST /api/chat**
+### **POST /api/v1/chat**
   
   This endpoint processes natural language queries and returns responses from the configured OpenAI model.
 
@@ -26,14 +26,14 @@ After starting the Hive Agent server with `agent.run()`, the following endpoints
   **Usage Example:**
   ```bash
   curl --request POST \
-    --url http://localhost:8000/api/chat \
+    --url http://localhost:8000/api/v1/chat \
     --header 'Content-Type: application/json' \
     --data '{"messages": [{"role": "user", "content": "What is the capital of France?"}]}'
   ```
 
 ## Entry Endpoint
 
-### **POST /api/entry/{namespace}**
+### **POST /api/v1/entry/{namespace}**
   
   This endpoint allows you to create an entry in a specified namespace.
 
@@ -50,12 +50,12 @@ After starting the Hive Agent server with `agent.run()`, the following endpoints
   **Usage Example:**
   ```bash
   curl --request POST \
-    --url http://localhost:8000/api/entry/my_namespace \
+    --url http://localhost:8000/api/v1/entry/my_namespace \
     --header 'Content-Type: application/json' \
     --data '{"key": "value"}'
   ```
 
-### **WebSocket /api/entry/{namespace}/stream**
+### **WebSocket /api/v1/entry/{namespace}/stream**
   
   This endpoint establishes a WebSocket connection for real-time data streaming into the specified namespace.
 
@@ -63,7 +63,7 @@ After starting the Hive Agent server with `agent.run()`, the following endpoints
   - Connect via WebSocket client and stream data as JSON messages.
   - Each sent message triggers an addition to the namespace and returns a confirmation.
 
-### **GET /api/entry/{namespace}**
+### **GET /api/v1/entry/{namespace}**
   
   Fetches all entries within a specific namespace.
 
@@ -73,10 +73,10 @@ After starting the Hive Agent server with `agent.run()`, the following endpoints
   **Usage Example:**
   ```bash
   curl --request GET \
-    --url http://localhost:8000/api/entry/my_namespace
+    --url http://localhost:8000/api/v1/entry/my_namespace
   ```
 
-### **GET /api/entry/{namespace}/{entry_id}**
+### **GET /api/v1/entry/{namespace}/{entry_id}**
   
   Retrieves a specific entry by its ID within the namespace.
 
@@ -86,10 +86,10 @@ After starting the Hive Agent server with `agent.run()`, the following endpoints
   **Usage Example:**
   ```bash
   curl --request GET \
-    --url http://localhost:8000/api/entry/my_namespace/1
+    --url http://localhost:8000/api/v1/entry/my_namespace/1
   ```
 
-### **PUT /api/entry/{namespace}/{entry_id}**
+### **PUT /api/v1/entry/{namespace}/{entry_id}**
   
   Updates a specific entry by its ID within the namespace.
 
@@ -106,12 +106,12 @@ After starting the Hive Agent server with `agent.run()`, the following endpoints
   **Usage Example:**
   ```bash
   curl --request PUT \
-    --url http://localhost:8000/api/entry/my_namespace/1 \
+    --url http://localhost:8000/api/v1/entry/my_namespace/1 \
     --header 'Content-Type: application/json' \
     --data '{"updated_key": "updated_value"}'
   ```
 
-### **DELETE /api/entry/{namespace}/{entry_id}**
+### **DELETE /api/v1/entry/{namespace}/{entry_id}**
   
   Removes a specific entry by its ID within the namespace.
 
@@ -121,7 +121,7 @@ After starting the Hive Agent server with `agent.run()`, the following endpoints
   **Usage Example:**
   ```bash
   curl --request DELETE \
-    --url http://localhost:8000/api/entry/my_namespace/1
+    --url http://localhost:8000/api/v1/entry/my_namespace/1
   ```
 
 These endpoints provide the foundation for interacting with the Hive Agent, allowing for both real-time and persistent data handling, as well as dynamic interaction via chat.

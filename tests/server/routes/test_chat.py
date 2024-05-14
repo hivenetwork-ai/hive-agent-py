@@ -1,5 +1,5 @@
 import pytest
-from fastapi import FastAPI, status
+from fastapi import APIRouter, FastAPI, status
 from httpx import AsyncClient
 
 from llama_index.core.llms import MessageRole
@@ -22,7 +22,9 @@ def agent():
 @pytest.fixture
 def app(agent):
     fastapi_app = FastAPI()
-    setup_chat_routes(fastapi_app, agent)
+    v1_router = APIRouter()
+    setup_chat_routes(v1_router, agent)
+    fastapi_app.include_router(v1_router, prefix="/api/v1")
     return fastapi_app
 
 
@@ -35,7 +37,7 @@ async def client(app):
 @pytest.mark.asyncio
 async def test_chat_no_messages(client):
     data = {"messages": []}
-    response = await client.post("/api/chat", json=data)
+    response = await client.post("/api/v1/chat", json=data)
     assert response.status_code == status.HTTP_400_BAD_REQUEST
     assert "No messages provided" in response.json()["detail"]
 
@@ -49,7 +51,7 @@ async def test_chat_last_message_not_user(client):
             {"role": MessageRole.SYSTEM, "content": "Another system message"}
         ]
     }
-    response = await client.post("/api/chat", json=data)
+    response = await client.post("/api/v1/chat", json=data)
     assert response.status_code == status.HTTP_400_BAD_REQUEST
     assert "Last message must be from user" in response.json()["detail"]
 
@@ -61,6 +63,6 @@ async def test_chat_success(client, agent):
             {"role": MessageRole.USER, "content": "Hello!"}
         ]
     }
-    response = await client.post("/api/chat", json=data)
+    response = await client.post("/api/v1/chat", json=data)
     assert response.status_code == status.HTTP_200_OK
     assert response.text == "chat response"

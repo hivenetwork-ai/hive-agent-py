@@ -1,6 +1,6 @@
 import pytest
 
-from fastapi import FastAPI
+from fastapi import APIRouter, FastAPI
 from httpx import ASGITransport, AsyncClient
 from unittest.mock import MagicMock, AsyncMock
 
@@ -21,7 +21,9 @@ def store(session_factory):
 @pytest.fixture
 def app(store):
     app = FastAPI()
-    setup_entry_routes(app, store)
+    v1_router = APIRouter()
+    setup_entry_routes(v1_router, store)
+    app.include_router(v1_router, prefix="/api/v1")
     return app
 
 
@@ -39,7 +41,7 @@ async def test_create_entry(client, store, mocker):
     mock_entry = MagicMock(id=1)
     mocker.patch.object(store, 'add', return_value=mock_entry)
 
-    response = await client.post(f"/api/entry/{namespace}", json=data)
+    response = await client.post(f"/api/v1/entry/{namespace}", json=data)
     assert response.status_code == 200
     assert response.json() == {
         "status": "entry created",
@@ -57,7 +59,7 @@ async def test_get_entries(client, store):
 
     store.get = AsyncMock(return_value=[mocked_entry])
 
-    response = await client.get(f"/api/entry/{namespace}")
+    response = await client.get(f"/api/v1/entry/{namespace}")
     assert response.status_code == 200
     response_data = response.json()
     assert response_data["status"] == "entries retrieved successfully"
@@ -74,7 +76,7 @@ async def test_get_entry_by_id(client, store):
 
     store.get_by_id = AsyncMock(return_value=mocked_entry.to_dict())
 
-    response = await client.get(f"/api/entry/{namespace}/{entry_id}")
+    response = await client.get(f"/api/v1/entry/{namespace}/{entry_id}")
     assert response.status_code == 200
 
     response_data = response.json()
@@ -92,7 +94,7 @@ async def test_update_entry(client, store):
 
     store.update = AsyncMock(return_value=None)
 
-    response = await client.put(f"/api/entry/{namespace}/{entry_id}", json=new_data)
+    response = await client.put(f"/api/v1/entry/{namespace}/{entry_id}", json=new_data)
     assert response.status_code == 200
     assert response.json()["status"] == "entry updated"
     store.update.assert_awaited_once_with(namespace, entry_id, new_data)
@@ -105,7 +107,7 @@ async def test_delete_entry(client, store):
 
     store.delete = AsyncMock(return_value=None)
 
-    response = await client.delete(f"/api/entry/{namespace}/{entry_id}")
+    response = await client.delete(f"/api/v1/entry/{namespace}/{entry_id}")
     assert response.status_code == 200
     assert response.json()["status"] == "entry removed"
     store.delete.assert_awaited_once_with(namespace, entry_id)

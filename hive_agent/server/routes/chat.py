@@ -1,6 +1,6 @@
 from typing import List
 
-from fastapi import HTTPException, Request, status
+from fastapi import APIRouter, HTTPException, Request, status
 from fastapi.responses import StreamingResponse
 from llama_index.core.llms import ChatMessage
 from llama_index.core.llms import MessageRole
@@ -17,9 +17,9 @@ class ChatData(BaseModel):
     messages: List[Message]
 
 
-def setup_chat_routes(app, agent):
+def setup_chat_routes(router: APIRouter, agent):
 
-    @app.post("/api/chat")
+    @router.post("/chat")
     async def chat(request: Request, data: ChatData):
         if len(data.messages) == 0:
             raise HTTPException(
