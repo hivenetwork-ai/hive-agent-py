@@ -52,10 +52,10 @@ Then, run your agent:
 my_agent.run()
 ```
 
-Finally, call the API endpoint, `/api/chat`, to see the result:
+Finally, call the API endpoint, `/api/v1/chat`, to see the result:
 
 ```
-curl --location 'localhost:8000/api/chat' \
+curl --location 'localhost:8000/api/v1/chat' \
 --header 'Content-Type: application/json' \
 --data '{ "messages": [{ "role": "user", "content": "Who is Satoshi Nakamoto?" }] }'
 ```
@@ -110,7 +110,7 @@ if __name__ == "__main__":
     [1] send a request:
     
     ```
-    curl --location 'localhost:8000/api/chat' \
+    curl --location 'localhost:8000/api/v1/chat' \
     --header 'Content-Type: application/json' \
     --data '{ "messages": [{ "role": "user", "content": "Which address initiated this transaction - 0x5c504ed432cb51138bcf09aa5e8a410dd4a1e204ef84bfed1be16dfba1b22060?" }] }'
     ```

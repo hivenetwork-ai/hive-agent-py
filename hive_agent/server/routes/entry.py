@@ -1,11 +1,11 @@
 import dateutil
 
-from fastapi import HTTPException, Request, WebSocket, status
+from fastapi import APIRouter, HTTPException, Request, WebSocket, status
 
 
-def setup_entry_routes(app, store):
+def setup_entry_routes(router: APIRouter, store):
 
-    @app.post("/api/entry/{namespace}")
+    @router.post("/entry/{namespace}")
     async def create_entry(namespace: str, request: Request):
         data = await request.json()
         new_entry = await store.add(namespace, data)
@@ -18,7 +18,7 @@ def setup_entry_routes(app, store):
             }
         }
 
-    @app.websocket("/api/entry/{namespace}/stream")
+    @router.websocket("/entry/{namespace}/stream")
     async def stream_entry(websocket: WebSocket, namespace: str):
         await websocket.accept()
 
@@ -44,7 +44,7 @@ def setup_entry_routes(app, store):
         finally:
             await websocket.close()
 
-    @app.get("/api/entry/{namespace}")
+    @router.get("/entry/{namespace}")
     async def get_entries(namespace: str):
         data_entries = await store.get(namespace)
         entries = [entry.to_dict() for entry in data_entries]
@@ -57,7 +57,7 @@ def setup_entry_routes(app, store):
             }
         }
 
-    @app.get("/api/entry/{namespace}/{entry_id}")
+    @router.get("/entry/{namespace}/{entry_id}")
     async def get_entry_by_id(namespace: str, entry_id: str):
         entry = await store.get_by_id(namespace, entry_id)
 
@@ -75,7 +75,7 @@ def setup_entry_routes(app, store):
                 detail="Requested data entry not found",
             )
 
-    @app.put("/api/entry/{namespace}/{entry_id}")
+    @router.put("/entry/{namespace}/{entry_id}")
     async def update_entry(namespace: str, entry_id: str, request: Request):
         new_data = await request.json()
         if 'timestamp' in new_data and isinstance(new_data['timestamp'], str):
@@ -91,7 +91,7 @@ def setup_entry_routes(app, store):
             }
         }
 
-    @app.delete("/api/entry/{namespace}/{entry_id}")
+    @router.delete("/entry/{namespace}/{entry_id}")
     async def delete_entry(namespace: str, entry_id: str):
         await store.delete(namespace, entry_id)
 
