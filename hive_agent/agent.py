@@ -22,8 +22,15 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+def get_log_level():
+    HIVE_AGENT_LOG_LEVEL = os.getenv('HIVE_AGENT_LOG_LEVEL', 'INFO').upper() # Check for env variable on the server and default to INFO if none is provided
+    return getattr(logging, HIVE_AGENT_LOG_LEVEL, logging.INFO)
+
 logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 logging.getLogger().addHandler(logging.StreamHandler(stream=sys.stdout))
+
+logger = logging.getLogger()
+logger.setLevel(get_log_level())
 
 
 class HiveAgent:
