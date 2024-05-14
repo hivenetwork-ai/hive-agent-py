@@ -1,5 +1,7 @@
 import logging
 import sys
+import logging
+import sys
 from datetime import datetime
 
 from sqlalchemy import delete, update
@@ -7,6 +9,8 @@ from sqlalchemy.future import select
 
 from hive_agent.store import DataEntry
 
+logging.basicConfig(stream=sys.stdout, level=logging.INFO)
+logging.getLogger().addHandler(logging.StreamHandler(stream=sys.stdout))
 logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 logging.getLogger().addHandler(logging.StreamHandler(stream=sys.stdout))
 
