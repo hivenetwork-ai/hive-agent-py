@@ -2,12 +2,19 @@ import logging
 import sys
 from datetime import datetime
 
+import logging
+import sys
+from datetime import datetime
+
 from typing import Any, Dict, List
 
 from eth_account import Account
 from eth_account.datastructures import SignedMessage
 from eth_account.signers.local import LocalAccount
 from eth_account.messages import encode_defunct
+
+logging.basicConfig(stream=sys.stdout, level=logging.INFO)
+logging.getLogger().addHandler(logging.StreamHandler(stream=sys.stdout))
 
 logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 logging.getLogger().addHandler(logging.StreamHandler(stream=sys.stdout))
@@ -20,7 +27,7 @@ class ImmutableDict:
         
     def add(self, key, value):
         if key in self._dict:
-            logging.error(f"key '{key}' already exists. Cannot update the value.")
+            logging.error(f"key '{key}' already exists. Cannot add the value.")
             raise KeyError(f"key '{key}' already exists. Cannot update the value.")
         self._dict[key] = value
         logging.debug(f"Added key: {key}")
