@@ -2,6 +2,7 @@ import logging
 import sys
 import logging
 import sys
+import os
 from datetime import datetime
 
 from sqlalchemy import delete, update
@@ -9,10 +10,16 @@ from sqlalchemy.future import select
 
 from hive_agent.store import DataEntry
 
-logging.basicConfig(stream=sys.stdout, level=logging.INFO)
+def get_log_level():
+    HIVE_AGENT_LOG_LEVEL = os.getenv('HIVE_AGENT_LOG_LEVEL', 'INFO').upper() # Check for env variable on the server and default to INFO if none is provided
+    level = getattr(logging, HIVE_AGENT_LOG_LEVEL, logging.INFO)   
+    return level 
+
+logging.basicConfig(stream=sys.stdout, level=get_log_level())
 logging.getLogger().addHandler(logging.StreamHandler(stream=sys.stdout))
-logging.basicConfig(stream=sys.stdout, level=logging.INFO)
-logging.getLogger().addHandler(logging.StreamHandler(stream=sys.stdout))
+
+logger = logging.getLogger()
+logger.setLevel(get_log_level())
 
 class Store:
     def __init__(self, session_factory):
