@@ -12,14 +12,14 @@ from hive_agent.store import DataEntry
 
 def get_log_level():
     HIVE_AGENT_LOG_LEVEL = os.getenv('HIVE_AGENT_LOG_LEVEL', 'INFO').upper() # Check for env variable on the server and default to INFO if none is provided
-    level = getattr(logging, HIVE_AGENT_LOG_LEVEL, logging.INFO)   
-    return level 
+    return getattr(logging, HIVE_AGENT_LOG_LEVEL, logging.INFO)    
 
 logging.basicConfig(stream=sys.stdout, level=get_log_level())
 logging.getLogger().addHandler(logging.StreamHandler(stream=sys.stdout))
 
 logger = logging.getLogger()
 logger.setLevel(get_log_level())
+
 
 class Store:
     def __init__(self, session_factory):
