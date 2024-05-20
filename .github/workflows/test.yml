@@ -2,12 +2,7 @@ name: hive-agent-py
 
 on:
   push:
-    branches:
-      - '**'
   pull_request:
-    branches:
-      - '**'
-    types: [opened, edited, reopened]
 
 jobs:
   test:
