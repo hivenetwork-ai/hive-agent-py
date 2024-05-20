@@ -1,3 +1,4 @@
+import os
 import unittest
 from unittest.mock import patch, MagicMock
 from sqlalchemy import create_engine, MetaData, Table, Column, Integer, String
@@ -12,6 +13,7 @@ load_dotenv = MagicMock()
 OpenAI = MagicMock()
 
 
+@patch.dict(os.environ, {"MODEL": "test_model"})
 class TestText2SQL(unittest.TestCase):
     def setUp(self):
         self.db_url = 'sqlite:///:memory:'
