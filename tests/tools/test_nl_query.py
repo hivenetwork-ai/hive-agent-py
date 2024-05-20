@@ -13,7 +13,7 @@ load_dotenv = MagicMock()
 OpenAI = MagicMock()
 
 
-@patch.dict(os.environ, {"MODEL": "test_model"})
+@patch.dict(os.environ, {"MODEL": "gpt-3.5-turbo"})
 class TestText2SQL(unittest.TestCase):
     def setUp(self):
         self.db_url = 'sqlite:///:memory:'
