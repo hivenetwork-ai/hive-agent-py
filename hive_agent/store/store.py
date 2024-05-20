@@ -10,6 +10,7 @@ from hive_agent.store import DataEntry
 logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 logging.getLogger().addHandler(logging.StreamHandler(stream=sys.stdout))
 
+
 class Store:
     def __init__(self, session_factory):
         self.session_factory = session_factory
