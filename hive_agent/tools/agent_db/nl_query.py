@@ -11,7 +11,7 @@ from sqlalchemy import create_engine
 
 load_dotenv()
 
-llm = OpenAI(temperature=0.1, model=os.getenv("MODEL"))
+llm = OpenAI(temperature=0.1, model=os.getenv("MODEL", "gpt-3.5-turbo"))
 
 
 def text_2_sql(db_url: str, prompt: str, tables=None):
