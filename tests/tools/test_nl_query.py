@@ -8,6 +8,9 @@ from llama_index.core.query_engine import NLSQLTableQueryEngine
 
 from hive_agent.tools.agent_db.nl_query import text_2_sql
 
+os.environ['OPENAI_API_KEY'] = 'test_key'
+os.environ['MODEL'] = 'gpt-3.5-turbo'
+
 load_dotenv = MagicMock()
 
 OpenAI = MagicMock()
