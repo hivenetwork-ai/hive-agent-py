@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import os
+import toml
 import signal
 import sys
 import uvicorn
@@ -24,7 +25,7 @@ load_dotenv()
 
 logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 logging.getLogger().addHandler(logging.StreamHandler(stream=sys.stdout))
-
+config = toml.load('../settings.toml')
 
 class HiveAgent:
     name: str
@@ -86,7 +87,7 @@ class HiveAgent:
         signal.signal(signal.SIGTERM, self.__signal_handler)
 
     def configure_cors(self):
-        environment = os.getenv("ENVIRONMENT", "dev")  # default to 'development' if not set
+        environment = config.get('environment').get('type') # default to 'development' if not set
 
         if environment == "dev":
             logger = logging.getLogger("uvicorn")
