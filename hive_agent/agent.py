@@ -26,7 +26,10 @@ load_dotenv()
 
 logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 logging.getLogger().addHandler(logging.StreamHandler(stream=sys.stdout))
-config = toml.load('../settings.toml')
+
+dir_path = os.path.dirname(os.path.realpath(__file__))
+config_path = os.path.join(dir_path, '..', 'settings.toml')
+config = toml.load(config_path)
 
 class HiveAgent:
     name: str

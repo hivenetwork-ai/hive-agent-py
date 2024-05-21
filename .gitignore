@@ -4,6 +4,7 @@ storage
 
 .env
 venv
+.venv
 
 **/*.egg-info
 build
