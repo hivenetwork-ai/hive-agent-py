@@ -1,7 +1,5 @@
 import asyncio
 import logging
-import os
-import toml
 import signal
 import sys
 import uvicorn
@@ -20,6 +18,7 @@ from hive_agent.server.routes import setup_routes
 from hive_agent.tools.agent_db import get_db_schemas, text_2_sql
 from hive_agent.wallet import WalletStore
 
+from hive_agent.config import Config
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -27,9 +26,7 @@ load_dotenv()
 logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 logging.getLogger().addHandler(logging.StreamHandler(stream=sys.stdout))
 
-dir_path = os.path.dirname(os.path.realpath(__file__))
-config_path = os.path.join(dir_path, '..', 'settings.toml')
-config = toml.load(config_path)
+config = Config()
 
 class HiveAgent:
     name: str
@@ -99,7 +96,8 @@ class HiveAgent:
         signal.signal(signal.SIGTERM, self.__signal_handler)
 
     def configure_cors(self):
-        environment = config.get('environment').get('type') # default to 'development' if not set
+        # environment = config.get('environment').get('type')
+        environment = config.get('environment','type') # default to 'development' if not set
 
         if environment == "dev":
             logger = logging.getLogger("uvicorn")
