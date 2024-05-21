@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "hive-agent-py"
+name = "hive-agent"
 version = "0.0.1"
 description = "This library provides you with an easy way to create and run Hive Agents"
 authors = ["Your Name <you@example.com>"]
