@@ -96,7 +96,6 @@ class HiveAgent:
         signal.signal(signal.SIGTERM, self.__signal_handler)
 
     def configure_cors(self):
-        # environment = config.get('environment').get('type')
         environment = config.get('environment','type') # default to 'development' if not set
 
         if environment == "dev":
