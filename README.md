@@ -136,27 +136,19 @@ If you want to contribute to the codebase, you would need to setup your dev envi
 - Copy the contents of [.env.example](.env.example) into your new .env file
 - API keys for third party tools are not provided.
   - `OPENAI_API_KEY` from OpenAI
-- Create a virtual Python environment
+- If you don't have Poetry installed, you can install it using the following commands:
 ```
-$ python -m venv ./venv
+$ curl -sSL https://install.python-poetry.org | python3 -
+
+$ export PATH="$HOME/.local/bin:$PATH" 
 ```
-- Activate the Python virtual env.
-  - Windows:
-    - In cmd.exe: `venv\Scripts\activate.bat`
-    - In PowerShell: `venv\Scripts\Activate.ps1`
-  - Unix: `source venv/bin/activate`
+- Activate the Virtual Environment created by Poetry with the following command:
+```
+$ poetry shell
+```
 - Install dependencies.
 ```
-$ pip install -r requirements.txt
-```
-- Finally, install the dev requirements:
-```
-$ pip install -r requirements-dev.txt
-```
-- **Bonus**: If you want to use a local version of this SDK with an agent being built with it:
-```
-# requirements.txt
--e /path/to/hive-agent-py
+$ poetry install --no-root
 ```
 
 ### Testing

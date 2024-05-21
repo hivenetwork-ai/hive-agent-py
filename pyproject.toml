@@ -1,0 +1,29 @@
+[tool.poetry]
+name = "hive-agent-py"
+version = "0.0.1"
+description = "This library provides you with an easy way to create and run Hive Agents"
+authors = ["Your Name <you@example.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+fastapi = "0.110.1"
+uvicorn = "0.23.2"
+python-dotenv = "1.0.1"
+llama-index = "0.10.35"
+web3 = "6.15.1"
+py-solc-x = "2.0.2"
+eth-account = "0.11.0"
+SQLAlchemy = "2.0.29"
+aiosqlite = "0.20.0"
+
+[tool.poetry.dev-dependencies]
+python = "^3.11"
+pytest = "8.1.1"
+pytest-asyncio = "0.23.6"
+pytest-mock = "3.14.0"
+httpx = "0.27.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
