@@ -17,6 +17,7 @@ from llama_index.core.tools import FunctionTool
 
 from hive_agent.llm_settings import init_llm_settings
 from hive_agent.server.routes import setup_routes
+from hive_agent.tools.agent_db import get_db_schemas, text_2_sql
 from hive_agent.wallet import WalletStore
 
 from dotenv import load_dotenv
@@ -52,9 +53,13 @@ class HiveAgent:
         self.__setup(db_url)
 
     def __setup(self, db_url: str):
-        agent_tools = [FunctionTool.from_defaults(fn=func) for func in self.functions]
+        custom_tools = self._tools_from_funcs(self.functions)
+        system_tools = self._tools_from_funcs([get_db_schemas, text_2_sql])
+
+        tools = custom_tools + system_tools
+
         self.__agent = OpenAIAgent.from_tools(
-            agent_tools,
+            tools=tools,
             system_prompt=f"""You are a domain-specific assistant that is helpful, respectful and honest. Always 
             answer as helpfully as possible, while being safe. Your answers should not include any harmful, 
             unethical, racist, sexist, toxic, dangerous, or illegal content. Please ensure that your responses are 
@@ -76,6 +81,10 @@ class HiveAgent:
         self.wallet_store.add_wallet()
 
         self.__setup_server(db_url)
+
+    @staticmethod
+    def _tools_from_funcs(funcs: List[Callable]) -> List[FunctionTool]:
+        return [FunctionTool.from_defaults(fn=func) for func in funcs]
 
     def __setup_server(self, db_url: str):
         init_llm_settings()
