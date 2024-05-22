@@ -41,6 +41,17 @@ async def test_chat_no_messages(client):
     assert response.status_code == status.HTTP_400_BAD_REQUEST
     assert "No messages provided" in response.json()["detail"]
 
+@pytest.mark.asyncio
+async def test_chat_empty_user_message(client):
+    data = {
+        "messages": [
+            {"role": MessageRole.USER, "content": ""}
+        ]
+    }
+    response = await client.post("/api/v1/chat", json=data)
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert "User message cannot be empty" in response.json()["detail"]
+
 
 @pytest.mark.asyncio
 async def test_chat_last_message_not_user(client):

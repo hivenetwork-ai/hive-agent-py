@@ -51,6 +51,24 @@ async def test_create_entry(client, store, mocker):
         }
     }
 
+@pytest.mark.asyncio
+async def test_get_entries_with_empty_json(client, store):
+    namespace = "test"
+    mocked_entry = MagicMock(to_dict=lambda: {})
+
+    store.get = AsyncMock(return_value=[mocked_entry])
+    response = await client.get(f"/api/v1/entry/{namespace}")
+    assert response.status_code == 404
+
+@pytest.mark.asyncio
+async def test_get_entries_with_invalid_namespace(client, store):
+    namespace = "not_valid_*^(*&$#)"
+    mocked_entry = MagicMock(to_dict=lambda: {'id': 1, 'data': 'test'})
+
+    store.get = AsyncMock(return_value=[mocked_entry])
+
+    response = await client.get(f"/api/v1/entry/{namespace}")
+    assert response.status_code == 404
 
 @pytest.mark.asyncio
 async def test_get_entries(client, store):

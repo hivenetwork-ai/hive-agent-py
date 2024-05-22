@@ -33,6 +33,13 @@ def setup_chat_routes(router: APIRouter, agent):
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Last message must be from user",
             )
+        
+        if not last_message.content:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="User message cannot be empty",
+            )
+
 
         # convert messages coming from the request to type ChatMessage
         messages = [ChatMessage(role=m.role, content=m.content) for m in data.messages]
