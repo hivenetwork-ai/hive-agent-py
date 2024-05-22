@@ -1,5 +1,6 @@
 import toml
 import os
+import logging
 
 class Config:
     def __init__(self, config_path='hive_config.toml'):
@@ -27,3 +28,9 @@ class Config:
         config_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), self.config_path)
         with open(config_path, 'w') as f:
             toml.dump(self.config, f)
+            
+    def get_log_level(self):
+        HIVE_AGENT_LOG_LEVEL = os.getenv('HIVE_AGENT_LOG_LEVEL', 'INFO').upper()
+        return getattr(logging, HIVE_AGENT_LOG_LEVEL, logging.INFO)
+    
+    
