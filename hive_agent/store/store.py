@@ -1,14 +1,20 @@
 import logging
 import sys
-from datetime import datetime
+import os
 
 from sqlalchemy import delete, update
 from sqlalchemy.future import select
 
 from hive_agent.store import DataEntry
 
-logging.basicConfig(stream=sys.stdout, level=logging.INFO)
+from hive_agent.config import Config
+config = Config()
+
+logging.basicConfig(stream=sys.stdout, level=config.get_log_level())
 logging.getLogger().addHandler(logging.StreamHandler(stream=sys.stdout))
+
+logger = logging.getLogger()
+logger.setLevel(config.get_log_level())
 
 
 class Store:

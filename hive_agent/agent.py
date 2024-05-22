@@ -18,15 +18,17 @@ from hive_agent.server.routes import setup_routes
 from hive_agent.tools.agent_db import get_db_schemas, text_2_sql
 from hive_agent.wallet import WalletStore
 
-from hive_agent.config import Config
 from dotenv import load_dotenv
+from hive_agent.config import Config
 
 load_dotenv()
+config = Config()
 
-logging.basicConfig(stream=sys.stdout, level=logging.INFO)
+logging.basicConfig(stream=sys.stdout, level=config.get_log_level())
 logging.getLogger().addHandler(logging.StreamHandler(stream=sys.stdout))
 
-config = Config()
+logger = logging.getLogger()
+logger.setLevel(config.get_log_level())
 
 class HiveAgent:
     name: str
