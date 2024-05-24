@@ -18,6 +18,8 @@ from hive_agent.server.routes import setup_routes
 from hive_agent.tools.agent_db import get_db_schemas, text_2_sql
 from hive_agent.wallet import WalletStore
 
+from ingestion_modules.custom_vectorstore import QdrantService 
+
 from dotenv import load_dotenv
 from hive_agent.config import Config
 
@@ -43,6 +45,7 @@ class HiveAgent:
             port=8000,
             instruction="",
             db_url="sqlite+aiosqlite:///hive_agent.db"
+            
     ):
         self.name = name
         self.functions = functions
