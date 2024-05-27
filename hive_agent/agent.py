@@ -42,7 +42,6 @@ class HiveAgent:
             host="0.0.0.0",
             port=8000,
             instruction="",
-            db_url="sqlite+aiosqlite:///hive_agent.db"
     ):
         self.name = name
         self.functions = functions
@@ -52,10 +51,12 @@ class HiveAgent:
         self.shutdown_event = asyncio.Event()
         self.instruction = instruction
 
-        self.__setup(db_url)
+        self.__setup()
 
-    def __setup(self, db_url: str):
+    def __setup(self):
         custom_tools = self._tools_from_funcs(self.functions)
+
+        # TODO: pass db client to db tools directly
         system_tools = self._tools_from_funcs([get_db_schemas, text_2_sql])
 
         tools = custom_tools + system_tools
@@ -82,17 +83,17 @@ class HiveAgent:
         self.wallet_store = WalletStore()
         self.wallet_store.add_wallet()
 
-        self.__setup_server(db_url)
+        self.__setup_server()
 
     @staticmethod
     def _tools_from_funcs(funcs: List[Callable]) -> List[FunctionTool]:
         return [FunctionTool.from_defaults(fn=func) for func in funcs]
 
-    def __setup_server(self, db_url: str):
+    def __setup_server(self):
         init_llm_settings()
 
         self.configure_cors()
-        setup_routes(self.app, self.__agent, db_url)
+        setup_routes(self.app, self.__agent)
 
         signal.signal(signal.SIGINT, self.__signal_handler)
         signal.signal(signal.SIGTERM, self.__signal_handler)

@@ -1,0 +1,28 @@
+from pydantic import BaseModel
+from typing import Dict, Any, Optional, List
+
+
+class TableCreate(BaseModel):
+    table_name: str
+    columns: Dict[str, str]
+
+
+class DataInsert(BaseModel):
+    table_name: str
+    data: Dict[str, Any]
+
+
+class DataRead(BaseModel):
+    table_name: str
+    filters: Optional[Dict[str, List[Any]]] = None
+
+
+class DataUpdate(BaseModel):
+    table_name: str
+    id: int
+    data: Dict[str, Any]
+
+
+class DataDelete(BaseModel):
+    table_name: str
+    id: int
