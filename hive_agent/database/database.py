@@ -10,17 +10,18 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
-# Configure logging
+
 # TODO: get log level from config
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 os.makedirs("hive-agent-data/db", exist_ok=True)
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///hive-agent-data/db/hive_agent.db")
+db_url = os.getenv("HIVE_AGENT_DATABASE_URL", "sqlite+aiosqlite:///hive-agent-data/db/hive_agent.db")
 
-engine = create_async_engine(DATABASE_URL, echo=True)
+engine = create_async_engine(db_url, echo=True)
 SessionLocal = sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
 Base = declarative_base()
+
 
 class TableDefinition(Base):
     __tablename__ = 'table_definitions'
@@ -28,13 +29,16 @@ class TableDefinition(Base):
     table_name = Column(String, unique=True, index=True)
     columns = Column(String)  # JSON string to store column definitions
 
+
 async def initialize_db():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
+
 async def get_db():
     async with SessionLocal() as session:
         yield session
+
 
 class DatabaseManager:
     def __init__(self, db: AsyncSession):
@@ -94,12 +98,14 @@ class DatabaseManager:
 
             columns = json.loads(columns_json)
             metadata = MetaData()
-            columns_list = [Column(name, JSON if column_type == 'JSON' else eval(column_type)) for name, column_type in columns.items()]
+            columns_list = [Column(name, JSON if column_type == 'JSON' else eval(column_type)) for name, column_type in
+                            columns.items()]
             columns_list.insert(0, Column('id', Integer, primary_key=True))
             table = Table(table_name, metadata, *columns_list)
 
             class_name = table_name.capitalize()
-            model = type(class_name, (Base,), {'__tablename__': table_name, '__table__': table, '__mapper_args__': {'eager_defaults': True}})
+            model = type(class_name, (Base,),
+                         {'__tablename__': table_name, '__table__': table, '__mapper_args__': {'eager_defaults': True}})
 
             async with engine.begin() as conn:
                 await conn.run_sync(Base.metadata.create_all)
@@ -124,12 +130,14 @@ class DatabaseManager:
 
             columns = json.loads(columns_json)
             metadata = MetaData()
-            columns_list = [Column(name, JSON if column_type == 'JSON' else eval(column_type)) for name, column_type in columns.items()]
+            columns_list = [Column(name, JSON if column_type == 'JSON' else eval(column_type)) for name, column_type in
+                            columns.items()]
             columns_list.insert(0, Column('id', Integer, primary_key=True))
             table = Table(table_name, metadata, *columns_list)
 
             class_name = table_name.capitalize()
-            model = type(class_name, (Base,), {'__tablename__': table_name, '__table__': table, '__mapper_args__': {'eager_defaults': True}})
+            model = type(class_name, (Base,),
+                         {'__tablename__': table_name, '__table__': table, '__mapper_args__': {'eager_defaults': True}})
 
             async with engine.begin() as conn:
                 await conn.run_sync(Base.metadata.create_all)
@@ -140,7 +148,8 @@ class DatabaseManager:
                     if key == 'details':
                         for value in values:
                             for sub_key, sub_value in value.items():
-                                query = query.where(text(f"json_extract({key}, '$.{sub_key}') = :sub_value")).params(sub_value=sub_value)
+                                query = query.where(text(f"json_extract({key}, '$.{sub_key}') = :sub_value")).params(
+                                    sub_value=sub_value)
                     else:
                         query = query.filter(getattr(model, key).in_(values))
 
@@ -163,12 +172,14 @@ class DatabaseManager:
 
             columns = json.loads(columns_json)
             metadata = MetaData()
-            columns_list = [Column(name, JSON if column_type == 'JSON' else eval(column_type)) for name, column_type in columns.items()]
+            columns_list = [Column(name, JSON if column_type == 'JSON' else eval(column_type)) for name, column_type in
+                            columns.items()]
             columns_list.insert(0, Column('id', Integer, primary_key=True))
             table = Table(table_name, metadata, *columns_list)
 
             class_name = table_name.capitalize()
-            model = type(class_name, (Base,), {'__tablename__': table_name, '__table__': table, '__mapper_args__': {'eager_defaults': True}})
+            model = type(class_name, (Base,),
+                         {'__tablename__': table_name, '__table__': table, '__mapper_args__': {'eager_defaults': True}})
 
             async with engine.begin() as conn:
                 await conn.run_sync(Base.metadata.create_all)
@@ -197,12 +208,14 @@ class DatabaseManager:
 
             columns = json.loads(columns_json)
             metadata = MetaData()
-            columns_list = [Column(name, JSON if column_type == 'JSON' else eval(column_type)) for name, column_type in columns.items()]
+            columns_list = [Column(name, JSON if column_type == 'JSON' else eval(column_type)) for name, column_type in
+                            columns.items()]
             columns_list.insert(0, Column('id', Integer, primary_key=True))
             table = Table(table_name, metadata, *columns_list)
 
             class_name = table_name.capitalize()
-            model = type(class_name, (Base,), {'__tablename__': table_name, '__table__': table, '__mapper_args__': {'eager_defaults': True}})
+            model = type(class_name, (Base,),
+                         {'__tablename__': table_name, '__table__': table, '__mapper_args__': {'eager_defaults': True}})
 
             async with engine.begin() as conn:
                 await conn.run_sync(Base.metadata.create_all)

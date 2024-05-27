@@ -34,6 +34,7 @@ curl --request POST \
 ```
 
 ## Database Endpoints
+Ensure you set the `HIVE_AGENT_DATABASE_URL` environment variable.
 
 ### **POST /api/v1/database/create-table**
 

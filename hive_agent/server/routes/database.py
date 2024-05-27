@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from hive_agent.database.database import get_db, DatabaseManager
 from hive_agent.database.schemas import TableCreate, DataInsert, DataUpdate, DataDelete, DataRead
 
-# Configure logging
+
 # TODO: get log level from config
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
