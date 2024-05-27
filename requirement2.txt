@@ -24,3 +24,4 @@ llama-index-embeddings-together
 #llama-index-embeddings-voyageai
 #llama-index-embeddings-openai
 llama-index-embeddings-cohere
+llama-index-vector-stores-chroma  
