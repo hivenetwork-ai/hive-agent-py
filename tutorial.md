@@ -173,3 +173,74 @@ curl --request DELETE \
 ```
 
 These endpoints provide the foundation for interacting with the Hive Agent, allowing for both real-time and persistent data handling, as well as dynamic interaction via chat and database operations.
+
+## File Management Endpoints
+
+### **POST /api/v1/uploadfiles/**
+
+This endpoint allows you to upload one or more files to the server.
+
+**Request:**
+
+- Multipart form data containing files.
+
+**Response:**
+- A JSON object with the names of the uploaded files.
+
+**Usage Example:**
+
+```bash
+curl --request POST \
+  --url http://localhost:8000/api/v1/uploadfiles/ \
+  --header 'Content-Type: multipart/form-data' \
+  --form 'files=@path/to/your/file1.txt' \
+  --form 'files=@path/to/your/file2.txt'
+```
+
+### GET /api/v1/files/
+
+This endpoint lists all files stored on the server.
+
+**Response:**
+- A JSON object containing a list of file names.
+
+**Usage Example:**
+```bash
+curl --request GET \
+  --url http://localhost:8000/api/v1/files/
+```
+
+### PUT /api/v1/files/{old_filename}/{new_filename}
+
+This endpoint renames a specified file on the server.
+
+**URL Parameters:**
+
+- old_filename: The current name of the file.
+- new_filename: The new name for the file.
+
+**Response:**
+- A JSON object indicating the success of the file renaming.
+
+**Usage Example:**
+```bash
+curl --request PUT \
+  --url http://localhost:8000/api/v1/files/old_name.txt/new_name.txt
+```
+
+### DELETE /api/v1/files/{filename}
+
+This endpoint deletes a specified file from the server.
+
+**URL Parameters:**
+
+- filename: The name of the file to be deleted.
+
+**Response:**
+- A JSON object indicating the success of the file deletion.
+
+**Usage Example:**
+```bash
+curl --request DELETE \
+  --url http://localhost:8000/api/v1/files/test_delete.txt
+```
