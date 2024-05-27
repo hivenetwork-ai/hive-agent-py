@@ -18,7 +18,6 @@ def agent():
             host='0.0.0.0',
             port=8000,
             instruction='Test instruction',
-            db_url='sqlite+aiosqlite:///hive_agent.db'
         )
     return agent
 
@@ -33,7 +32,7 @@ async def test_agent_initialization(agent):
 
 def test_server_setup(agent):
     with patch('hive_agent.agent.setup_routes') as mock_setup_routes:
-        agent._HiveAgent__setup_server('db_url')
+        agent._HiveAgent__setup_server()
         mock_setup_routes.assert_called_once()
 
 
