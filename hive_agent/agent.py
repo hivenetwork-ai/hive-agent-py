@@ -12,11 +12,15 @@ from fastapi.middleware.cors import CORSMiddleware
 from llama_index.agent.openai import OpenAIAgent
 from llama_index.core.llms import ChatMessage
 from llama_index.core.tools import FunctionTool
+from llama_index.core import StorageContext, VectorStoreIndex
+from llama_index.core.objects import ObjectIndex
 
 from hive_agent.llm_settings import init_llm_settings
 from hive_agent.server.routes import setup_routes
 from hive_agent.tools.agent_db import get_db_schemas, text_2_sql
 from hive_agent.wallet import WalletStore
+
+from ingestion_modules.custom_vectorstore.chroma_service import ChromaService
 
 from dotenv import load_dotenv
 from hive_agent.config import Config
@@ -42,6 +46,8 @@ class HiveAgent:
             host="0.0.0.0",
             port=8000,
             instruction="",
+            db_url="sqlite+aiosqlite:///hive_agent.db",
+            vector_db=ChromaService()
     ):
         self.name = name
         self.functions = functions
@@ -50,19 +56,29 @@ class HiveAgent:
         self.app = FastAPI()
         self.shutdown_event = asyncio.Event()
         self.instruction = instruction
+        self.vector_db = vector_db
 
         self.__setup()
 
     def __setup(self):
         custom_tools = self._tools_from_funcs(self.functions)
+        vector_store =  self.vector_db
+        
 
         # TODO: pass db client to db tools directly
         system_tools = self._tools_from_funcs([get_db_schemas, text_2_sql])
 
         tools = custom_tools + system_tools
+        
+        storage_context = StorageContext.from_defaults(vector_store=vector_store)
+        object_index = ObjectIndex.from_objects(
+    tools,
+    index_cls=VectorStoreIndex,
+    storage_context=storage_context,
+)
 
         self.__agent = OpenAIAgent.from_tools(
-            tools=tools,
+            tool_retriever=object_index.as_retriever(similarity_top_k=2),
             system_prompt=f"""You are a domain-specific assistant that is helpful, respectful and honest. Always 
             answer as helpfully as possible, while being safe. Your answers should not include any harmful, 
             unethical, racist, sexist, toxic, dangerous, or illegal content. Please ensure that your responses are 
