@@ -51,6 +51,28 @@ def test_signal_handler(agent):
         mock_create_task.assert_called_once_with(agent.shutdown_procedures())
 
 
+def test_server_setup_exception(agent):
+    with patch('hive_agent.agent.setup_routes') as mock_setup_routes:
+        mock_setup_routes.side_effect = Exception('Failed to setup routes')
+        with pytest.raises(Exception):
+            agent._HiveAgent__setup_server()
+
+
+def test_openai_agent_initialization_exception(agent):
+    with patch('hive_agent.agent.OpenAIAgent.from_tools') as mock_from_tools:
+        mock_from_tools.side_effect = Exception('Failed to initialize OpenAI agent')
+        with pytest.raises(Exception):
+            agent._HiveAgent__setup()
+
+
+@pytest.mark.asyncio
+async def test_shutdown_procedures_exception(agent):
+    with patch('asyncio.gather') as mock_gather:
+        mock_gather.side_effect = Exception('Failed to gather tasks')
+        with pytest.raises(Exception):
+            await agent.shutdown_procedures()
+
+
 @pytest.mark.asyncio
 async def test_cleanup(agent):
     agent.db_session = MagicMock()
