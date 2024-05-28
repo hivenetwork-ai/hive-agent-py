@@ -16,3 +16,4 @@ build
 
 *.db
 **/*/hive-agent-data/
+hive-agent-data/
