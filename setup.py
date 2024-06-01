@@ -11,9 +11,12 @@ setup(
         'uvicorn==0.23.2',
         'python-dotenv==1.0.1',
         'llama-index==0.10.35',
-        'web3==6.15.1',
-        'py-solc-x==2.0.2',
-        'eth-account==0.11.0',
     ],
+    extras_require={
+        "web3": ['web3==6.15.1',
+                 'py-solc-x==2.0.2',
+                 'eth-account==0.11.0'
+        ],
+    },
     python_requires='>=3.11',
 )

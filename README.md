@@ -19,6 +19,17 @@ Or add it to your _requirements.txt_ file:
 hive-agent @ git+https://github.com/hivenetwork-ai/hive-agent-py@main
 ```
 
+### Optional Dependencies
+To install with the optional web3 dependencies, you can specify them as follows:
+```
+$ pip install git+https://github.com/hivenetwork-ai/hive-agent-py.git@main#egg=hive-agent[web3]
+```
+
+Or add it to your _requirements.txt_ file:
+```
+hive-agent[web3] @ git+https://github.com/hivenetwork-ai/hive-agent-py@main
+```
+
 ## Environment Setup
 You need to specify an `OPENAI_API_KEY` in a _.env_ file in this directory.
 
