@@ -1,6 +1,7 @@
 import signal
 
 import pytest
+
 from unittest.mock import MagicMock, patch
 
 from hive_agent.agent import HiveAgent
@@ -9,17 +10,17 @@ from hive_agent.agent import HiveAgent
 @pytest.fixture
 def agent():
     with patch('hive_agent.agent.OpenAIAgent'), \
-            patch('hive_agent.agent.WalletStore'), \
+            patch('hive_agent.wallet.WalletStore'), \
             patch('hive_agent.agent.setup_routes'), \
             patch('uvicorn.Server.serve', new_callable=MagicMock):
-        agent = HiveAgent(
+        test_agent = HiveAgent(
             name='TestAgent',
             functions=[lambda x: x],
             host='0.0.0.0',
             port=8000,
             instruction='Test instruction',
         )
-    return agent
+    return test_agent
 
 
 @pytest.mark.asyncio

@@ -16,7 +16,6 @@ from llama_index.core.tools import FunctionTool
 from hive_agent.llm_settings import init_llm_settings
 from hive_agent.server.routes import setup_routes
 from hive_agent.tools.agent_db import get_db_schemas, text_2_sql
-from hive_agent.wallet import WalletStore
 
 from dotenv import load_dotenv
 from hive_agent.config import Config
@@ -30,9 +29,10 @@ logging.getLogger().addHandler(logging.StreamHandler(stream=sys.stdout))
 logger = logging.getLogger()
 logger.setLevel(config.get_log_level())
 
+
 class HiveAgent:
     name: str
-    wallet_store: WalletStore
+    wallet_store: 'WalletStore' # this attribute will be conditionally initialized
     __agent: OpenAIAgent
 
     def __init__(
@@ -50,8 +50,17 @@ class HiveAgent:
         self.app = FastAPI()
         self.shutdown_event = asyncio.Event()
         self.instruction = instruction
+        self.optional_dependencies = {}
 
+        self._check_optional_dependencies()
         self.__setup()
+
+    def _check_optional_dependencies(self):
+        try:
+            from web3 import Web3
+            self.optional_dependencies['web3'] = True
+        except ImportError:
+            self.optional_dependencies['web3'] = False
 
     def __setup(self):
         custom_tools = self._tools_from_funcs(self.functions)
@@ -80,8 +89,13 @@ class HiveAgent:
             """
         )
 
-        self.wallet_store = WalletStore()
-        self.wallet_store.add_wallet()
+        if self.optional_dependencies.get('web3'):
+            from hive_agent.wallet import WalletStore
+            self.wallet_store = WalletStore()
+            self.wallet_store.add_wallet()
+        else:
+            self.wallet_store = None
+            logger.warning("'web3' extras not installed. Web3-related functionality will not be available.")
 
         self.__setup_server()
 
@@ -99,7 +113,7 @@ class HiveAgent:
         signal.signal(signal.SIGTERM, self.__signal_handler)
 
     def configure_cors(self):
-        environment = config.get('environment','type') # default to 'development' if not set
+        environment = config.get('environment', 'type')  # default to 'development' if not set
 
         if environment == "dev":
             logger = logging.getLogger("uvicorn")
