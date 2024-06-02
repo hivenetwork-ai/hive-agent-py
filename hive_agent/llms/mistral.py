@@ -3,9 +3,9 @@ from llama_index.core.agent import FunctionCallingAgentWorker
 
 class MistralLLM:
     def __init__(self, tools, instruction):
-        self.agent = FunctionCallingAgentWorker.from_tools(
-                tools,
-                system_prompt=f"""You are a domain-specific assistant that is helpful, respectful and honest. Always 
+        self.tools = tools
+        self.instruction = instruction
+        self.system_prompt = f"""You are a domain-specific assistant that is helpful, respectful and honest. Always 
                 answer as helpfuly as possible, while being safe. Your answers should not include any harmful, 
                 unethical, racist, sexist, toxic, dangerous, or illegal content. Please ensure that your responses are 
                 socially unbiased and positive in nature. If a question does not make any sense, or is not factually 
@@ -18,8 +18,11 @@ class MistralLLM:
                 based on the tool result.
 
                 Here is your domain-specific instruction:
-                {instruction}
-                """,
+                {self.instruction}
+                """
+        self.agent = FunctionCallingAgentWorker.from_tools(
+                tools,
+                system_prompt=self.system_prompt,
                 llm=Settings.llm,
                 allow_parallel_tool_calls=False,
                 ).as_agent()

@@ -2,9 +2,9 @@ from llama_index.agent.openai import OpenAIAgent
 
 class OpenAILLM:
     def __init__(self, tools, instruction):
-        self.agent = OpenAIAgent.from_tools(
-                tools=tools,
-                system_prompt=f"""You are a domain-specific assistant that is helpful, respectful and honest. Always 
+        self.tools = tools
+        self.instruction = instruction
+        self.system_prompt = f"""You are a domain-specific assistant that is helpful, respectful and honest. Always 
                 answer as helpfuly as possible, while being safe. Your answers should not include any harmful, 
                 unethical, racist, sexist, toxic, dangerous, or illegal content. Please ensure that your responses are 
                 socially unbiased and positive in nature. If a question does not make any sense, or is not factually 
@@ -17,6 +17,6 @@ class OpenAILLM:
                 based on the tool result.
 
                 Here is your domain-specific instruction:
-                {instruction}
+                {self.instruction}
                 """
-            )
+        self.agent = OpenAIAgent.from_tools(tools=self.tools, system_prompt=self.system_prompt)
