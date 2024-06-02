@@ -1,6 +1,8 @@
 from fastapi import FastAPI, APIRouter
 
 from llama_index.agent.openai import OpenAIAgent
+from llama_index.core.agent import FunctionCallingAgentWorker
+
 
 from .chat import setup_chat_routes
 from .database import setup_database_routes
