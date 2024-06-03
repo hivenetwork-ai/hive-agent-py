@@ -13,3 +13,5 @@ llama-index-llms-anthropic==0.1.11
 llama-index-llms-mistralai==0.1.12
 llama-index-llms-ollama==0.1.5
 llama-index-llms-openai==0.1.21
+anthropic==0.23.1
+mistralai==0.2.0
