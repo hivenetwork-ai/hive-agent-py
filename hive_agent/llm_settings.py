@@ -15,7 +15,7 @@ def init_llm_settings():
         Settings.llm = OpenAI(model=model)
     elif "claude" in model: 
         Settings.llm = Anthropic(model=model, api_key=os.getenv('ANTHROPIC_API_KEY'))
-    elif "mistral" in model:
+    elif "mixtral" in model:
         Settings.llm = MistralAI(model=model, api_key=os.getenv('MISTRAL_API_KEY'))
     elif "llama" in model:
         Settings.llm = Ollama(model=model, api_key=os.getenv('LLAMA_API_KEY'))

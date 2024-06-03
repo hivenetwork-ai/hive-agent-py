@@ -81,24 +81,18 @@ class HiveAgent:
 
         tools = custom_tools + system_tools
 
-        self.__agent = OpenAIAgent.from_tools(
-            tools=tools,
-            system_prompt=f"""You are a domain-specific assistant that is helpful, respectful and honest. Always 
-            answer as helpfully as possible, while being safe. Your answers should not include any harmful, 
-            unethical, racist, sexist, toxic, dangerous, or illegal content. Please ensure that your responses are 
-            socially unbiased and positive in nature. If a question does not make any sense, or is not factually 
-            coherent, explain why instead of answering something not correct. If you don't know the answer to a 
-            question, please don't share false information.
-
-            You may be provided with tools to help you answer questions. Always ensure you use the result from 
-            the most appropriate/relevant function tool to answer the original question in the user's prompt and comment
-            on any provided data from the user or from the function result. Whenever you use a tool, explain your answer
-            based on the tool result.
-
-            Here is your domain-specific instruction:
-            {self.instruction}
-            """
-        )
+        model = config.get("model", "model", "gpt-3.5-turbo")
+        if "gpt" in model:   
+            self.__agent = OpenAILLM(tools, self.instruction).agent
+        elif "claude" in model: 
+            self.__agent = ClaudeLLM(tools, self.instruction).agent
+        elif "mixtral" in model: 
+            self.__agent = MistralLLM(tools, self.instruction).agent    
+        elif "llama" in model: 
+            self.__agent = LlamaLLM(tools, self.instruction).agent
+        else:
+            self.wallet_store = None
+            logger.warning("'web3' extras not installed. Web3-related functionality will not be available.")
 
         if self.optional_dependencies.get('web3'):
             from hive_agent.wallet import WalletStore
