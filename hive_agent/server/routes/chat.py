@@ -7,7 +7,7 @@ from llama_index.core.llms import MessageRole
 
 from pydantic import BaseModel
 
-
+from hive_agent.config import Config
 class Message(BaseModel):
     role: MessageRole
     content: str
@@ -36,12 +36,19 @@ def setup_chat_routes(router: APIRouter, agent):
 
         # convert messages coming from the request to type ChatMessage
         messages = [ChatMessage(role=m.role, content=m.content) for m in data.messages]
-        response = await agent.astream_chat(last_message.content, messages)
+        config = Config()
+        model = config.get("model", "model", "gpt-3.5-turbo")
+        if "gpt" in model:
+            response = await agent.astream_chat(last_message.content, messages)
+        else:
+            response = await agent.achat(last_message.content, messages)
 
         async def event_generator():
             async for token in response.async_response_gen():
                 if await request.is_disconnected():
                     break
                 yield token
-
-        return StreamingResponse(event_generator(), media_type="text/plain")
+        if "gpt" in model:
+            return StreamingResponse(event_generator(), media_type="text/plain")
+        else:
+            return response
