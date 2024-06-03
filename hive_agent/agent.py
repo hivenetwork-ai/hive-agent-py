@@ -3,7 +3,6 @@ import logging
 import signal
 import sys
 import uvicorn
-from llama_index.core.settings import Settings
 
 from typing import Callable, List
 
@@ -11,18 +10,13 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from llama_index.agent.openai import OpenAIAgent
-from hive_agent.llms import OpenAILLM
+from llama_index.core.llms import ChatMessage
+from llama_index.core.tools import FunctionTool
 
-from llama_index.core.agent import FunctionCallingAgentWorker
 from hive_agent.llms import OpenAILLM
 from hive_agent.llms import ClaudeLLM
 from hive_agent.llms import MistralLLM
 from hive_agent.llms import LlamaLLM
-
-
-from llama_index.core.llms import ChatMessage
-from llama_index.core.tools import FunctionTool
-
 
 from hive_agent.llm_settings import init_llm_settings
 from hive_agent.server.routes import setup_routes
@@ -91,8 +85,7 @@ class HiveAgent:
         elif "llama" in model: 
             self.__agent = LlamaLLM(tools, self.instruction).agent
         else:
-            self.wallet_store = None
-            logger.warning("'web3' extras not installed. Web3-related functionality will not be available.")
+            self.__agent = OpenAILLM(tools, self.instruction).agent
 
         if self.optional_dependencies.get('web3'):
             from hive_agent.wallet import WalletStore
