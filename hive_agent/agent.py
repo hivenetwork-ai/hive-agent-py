@@ -34,7 +34,6 @@ logging.getLogger().addHandler(logging.StreamHandler(stream=sys.stdout))
 logger = logging.getLogger()
 logger.setLevel(config.get_log_level())
 
-
 class HiveAgent:
     name: str
     wallet_store: 'WalletStore' # this attribute will be conditionally initialized
