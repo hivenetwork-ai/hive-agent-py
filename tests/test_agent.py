@@ -9,7 +9,10 @@ from hive_agent.agent import HiveAgent
 
 @pytest.fixture
 def agent():
-    with patch('hive_agent.agent.OpenAIAgent'), \
+    with patch('hive_agent.agent.OpenAILLM'), \
+            patch('hive_agent.agent.ClaudeLLM'), \
+            patch('hive_agent.agent.LlamaLLM'), \
+            patch('hive_agent.agent.MistralLLM'), \
             patch('hive_agent.wallet.WalletStore'), \
             patch('hive_agent.agent.setup_routes'), \
             patch('uvicorn.Server.serve', new_callable=MagicMock):
