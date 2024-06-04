@@ -4,7 +4,7 @@ import signal
 import sys
 import uvicorn
 
-from typing import Callable, List
+from typing import Callable, List, Any
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -27,6 +27,8 @@ from hive_agent.tools.agent_db import get_db_schemas, text_2_sql
 from dotenv import load_dotenv
 from hive_agent.config import Config
 
+
+
 load_dotenv()
 config = Config()
 
@@ -40,7 +42,7 @@ logger.setLevel(config.get_log_level())
 class HiveAgent:
     name: str
     wallet_store: 'WalletStore' # this attribute will be conditionally initialized
-    __agent: OpenAIAgent | FunctionCallingAgentWorker
+    __agent: Any
 
     def __init__(
             self,
@@ -62,6 +64,7 @@ class HiveAgent:
         self._check_optional_dependencies()
         self.__setup()
 
+
     def _check_optional_dependencies(self):
         try:
             from web3 import Web3
@@ -70,6 +73,7 @@ class HiveAgent:
             self.optional_dependencies['web3'] = False
 
     def __setup(self):
+        init_llm_settings()
         custom_tools = self._tools_from_funcs(self.functions)
 
         # TODO: pass db client to db tools directly
@@ -81,11 +85,13 @@ class HiveAgent:
         if "gpt" in model:   
             self.__agent = OpenAILLM(tools, self.instruction).agent
         elif "claude" in model: 
-            self.__agent = ClaudeLLM(tools, self.instruction).agent
-        elif "mixtral" in model: 
-            self.__agent = MistralLLM(tools, self.instruction).agent    
+            self.__agent = ClaudeLLM(tools, self.instruction).agent 
         elif "llama" in model: 
             self.__agent = LlamaLLM(tools, self.instruction).agent
+            print(f"Model selected is Llama in agent.py")
+        elif "mixtral" or "mistral" in model: 
+            print(f"Model selected is Mistral")
+            self.__agent = MistralLLM(tools, self.instruction).agent
         else:
             self.__agent = OpenAILLM(tools, self.instruction).agent
 
@@ -105,8 +111,7 @@ class HiveAgent:
         return [FunctionTool.from_defaults(fn=func) for func in funcs]
 
     def __setup_server(self):
-        init_llm_settings()
-
+       
         self.configure_cors()
         setup_routes(self.app, self.__agent)
 

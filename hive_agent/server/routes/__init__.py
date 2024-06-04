@@ -8,9 +8,10 @@ from .database import setup_database_routes
 from .files import setup_files_routes
 
 from hive_agent.database.database import initialize_db
+from typing import Any
 
 
-def setup_routes(app: FastAPI, agent: OpenAIAgent | FunctionCallingAgentWorker):
+def setup_routes(app: FastAPI, agent: Any):
 
     @app.on_event("startup")
     async def startup_event():

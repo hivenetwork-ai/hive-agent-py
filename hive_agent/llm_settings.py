@@ -11,19 +11,19 @@ load_dotenv()
 
 def init_llm_settings():
     config = Config()
-    model = config.get("model", "model", "claude-3-opus-20240229")
+    model = config.get("model", "model", "gpt-3.5-turbo")
     if "gpt" in model:
-        Settings.llm = OpenAI(model=model)
+        Settings.llm = OpenAI(model=model) 
         logging.info(f"Model selected is openai")
     elif "claude" in model: 
         Settings.llm = Anthropic(model=model, api_key=os.getenv('ANTHROPIC_API_KEY'))
         logging.info(f"Model selected is Claude")
-    elif "mixtral" in model:
-        Settings.llm = MistralAI(model=model, api_key=os.getenv('MISTRAL_API_KEY'))
-        logging.info(f"Model selected is Mistral")
     elif "llama" in model:
         Settings.llm = Ollama(model=model, api_key=os.getenv('LLAMA_API_KEY'))
         logging.info(f"Model selected is Llama")
+    elif "mixtral" or "mistral" in model:
+        Settings.llm = MistralAI(model=model, api_key=os.getenv('MISTRAL_API_KEY'))
+        logging.info(f"Model selected is Mistral")
     else:
         logging.info(f"Model selected is default")
 

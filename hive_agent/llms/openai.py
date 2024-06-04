@@ -19,4 +19,5 @@ class OpenAILLM:
                 Here is your domain-specific instruction:
                 {self.instruction}
                 """
+        print("openAI LLM initialized")
         self.agent = OpenAIAgent.from_tools(tools=self.tools, system_prompt=self.system_prompt)
