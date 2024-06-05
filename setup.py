@@ -11,6 +11,10 @@ setup(
         'uvicorn==0.23.2',
         'python-dotenv==1.0.1',
         'llama-index==0.10.35',
+        'llama-index-llms-anthropic==0.1.11',
+        'llama-index-llms-mistralai==0.1.12',
+        'llama-index-llms-ollama==0.1.5',
+        'llama-index-llms-openai==0.1.21'
     ],
     extras_require={
         "web3": ['web3==6.15.1',

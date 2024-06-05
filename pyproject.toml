@@ -18,6 +18,10 @@ SQLAlchemy = "2.0.29"
 aiosqlite = "0.20.0"
 toml = "0.10.2"
 python-multipart = "0.0.9"
+llama-index-llms-anthropic = "0.1.11"
+llama-index-llms-mistralai = "0.1.12"
+llama-index-llms-ollama = "0.1.5"
+llama-index-llms-openai = "0.1.21"
 
 [tool.poetry.extras]
 web3 = ["web3", "py-solc-x", "eth-account"]

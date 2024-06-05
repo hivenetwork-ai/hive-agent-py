@@ -1,15 +1,17 @@
 from fastapi import FastAPI, APIRouter
 
 from llama_index.agent.openai import OpenAIAgent
+from llama_index.core.agent import FunctionCallingAgentWorker
 
 from .chat import setup_chat_routes
 from .database import setup_database_routes
 from .files import setup_files_routes
 
 from hive_agent.database.database import initialize_db
+from typing import Any
 
 
-def setup_routes(app: FastAPI, agent: OpenAIAgent):
+def setup_routes(app: FastAPI, agent: Any):
 
     @app.on_event("startup")
     async def startup_event():

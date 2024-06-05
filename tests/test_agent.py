@@ -1,15 +1,24 @@
 import signal
-
+import sys
+from hive_agent.config import Config
 import pytest
 
 from unittest.mock import MagicMock, patch
 
 from hive_agent.agent import HiveAgent
+import logging
+
+config = Config()
+logging.basicConfig(stream=sys.stdout, level=config.get_log_level())
+logging.getLogger().addHandler(logging.StreamHandler(stream=sys.stdout))
 
 
 @pytest.fixture
 def agent():
-    with patch('hive_agent.agent.OpenAIAgent'), \
+    with patch('hive_agent.agent.OpenAILLM'), \
+            patch('hive_agent.agent.ClaudeLLM'), \
+            patch('hive_agent.agent.MistralLLM'), \
+            patch('hive_agent.agent.OllamaLLM'), \
             patch('hive_agent.wallet.WalletStore'), \
             patch('hive_agent.agent.setup_routes'), \
             patch('uvicorn.Server.serve', new_callable=MagicMock):

@@ -4,12 +4,19 @@ import signal
 import sys
 import uvicorn
 
-from typing import Callable, List
+from typing import Callable, List, Any
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from llama_index.agent.openai import OpenAIAgent
+from llama_index.core.agent import FunctionCallingAgentWorker
+
+from hive_agent.llms import OpenAILLM
+from hive_agent.llms import ClaudeLLM
+from hive_agent.llms import MistralLLM
+from hive_agent.llms import OllamaLLM
+
 from llama_index.core.llms import ChatMessage
 from llama_index.core.tools import FunctionTool
 
@@ -19,6 +26,8 @@ from hive_agent.tools.agent_db import get_db_schemas, text_2_sql
 
 from dotenv import load_dotenv
 from hive_agent.config import Config
+
+
 
 load_dotenv()
 config = Config()
@@ -33,7 +42,7 @@ logger.setLevel(config.get_log_level())
 class HiveAgent:
     name: str
     wallet_store: 'WalletStore' # this attribute will be conditionally initialized
-    __agent: OpenAIAgent
+    __agent: Any
 
     def __init__(
             self,
@@ -55,6 +64,7 @@ class HiveAgent:
         self._check_optional_dependencies()
         self.__setup()
 
+
     def _check_optional_dependencies(self):
         try:
             from web3 import Web3
@@ -63,6 +73,7 @@ class HiveAgent:
             self.optional_dependencies['web3'] = False
 
     def __setup(self):
+        init_llm_settings()
         custom_tools = self._tools_from_funcs(self.functions)
 
         # TODO: pass db client to db tools directly
@@ -70,24 +81,20 @@ class HiveAgent:
 
         tools = custom_tools + system_tools
 
-        self.__agent = OpenAIAgent.from_tools(
-            tools=tools,
-            system_prompt=f"""You are a domain-specific assistant that is helpful, respectful and honest. Always 
-            answer as helpfully as possible, while being safe. Your answers should not include any harmful, 
-            unethical, racist, sexist, toxic, dangerous, or illegal content. Please ensure that your responses are 
-            socially unbiased and positive in nature. If a question does not make any sense, or is not factually 
-            coherent, explain why instead of answering something not correct. If you don't know the answer to a 
-            question, please don't share false information.
+        model = config.get("model", "model", "gpt-3.5-turbo")
+        if "gpt" in model:   
+            self.__agent = OpenAILLM(tools, self.instruction).agent
+        elif "claude" in model: 
+            self.__agent = ClaudeLLM(tools, self.instruction).agent 
+        elif "llama" in model: 
+            self.__agent = OllamaLLM(tools, self.instruction).agent
+            print(f"Model selected is Ollama model in agent.py")
+        elif "mixtral" or "mistral" in model: 
+            print(f"Model selected is Mistral")
+            self.__agent = MistralLLM(tools, self.instruction).agent
+        else:
+            self.__agent = OpenAILLM(tools, self.instruction).agent
 
-            You may be provided with tools to help you answer questions. Always ensure you use the result from 
-            the most appropriate/relevant function tool to answer the original question in the user's prompt and comment
-            on any provided data from the user or from the function result. Whenever you use a tool, explain your answer
-            based on the tool result.
-
-            Here is your domain-specific instruction:
-            {self.instruction}
-            """
-        )
 
         if self.optional_dependencies.get('web3'):
             from hive_agent.wallet import WalletStore
@@ -104,8 +111,7 @@ class HiveAgent:
         return [FunctionTool.from_defaults(fn=func) for func in funcs]
 
     def __setup_server(self):
-        init_llm_settings()
-
+       
         self.configure_cors()
         setup_routes(self.app, self.__agent)
 
