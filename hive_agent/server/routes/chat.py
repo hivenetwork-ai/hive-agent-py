@@ -8,7 +8,6 @@ from llama_index.agent.openai import OpenAIAgent
 
 from pydantic import BaseModel
 
-from hive_agent.config import Config
 class Message(BaseModel):
     role: MessageRole
     content: str
@@ -37,8 +36,7 @@ def setup_chat_routes(router: APIRouter, agent):
 
         # convert messages coming from the request to type ChatMessage
         messages = [ChatMessage(role=m.role, content=m.content) for m in data.messages]
-        config = Config()
-        model = config.get("model", "model", "gpt-3.5-turbo")
+
         if isinstance(agent, OpenAIAgent): 
             response = await agent.astream_chat(last_message.content, messages)
         else:
@@ -49,7 +47,7 @@ def setup_chat_routes(router: APIRouter, agent):
                 if await request.is_disconnected():
                     break
                 yield token
-        if "gpt" in model:
+        if isinstance(agent, OpenAIAgent): 
             return StreamingResponse(event_generator(), media_type="text/plain")
         else:
             return response
