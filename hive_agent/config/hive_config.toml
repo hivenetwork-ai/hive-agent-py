@@ -3,9 +3,3 @@ model = "gpt-4-turbo-preview"
 
 [environment]
 type = "dev"
-
-
-# claude-3-opus-20240229
-# gpt-4-turbo-preview
-# open-mixtral-8x22b
-

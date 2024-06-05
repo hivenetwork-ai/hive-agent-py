@@ -86,7 +86,7 @@ class HiveAgent:
             self.__agent = OpenAILLM(tools, self.instruction).agent
         elif "claude" in model: 
             self.__agent = ClaudeLLM(tools, self.instruction).agent 
-        elif "ollama" in model: 
+        elif "llama" in model: 
             self.__agent = OllamaLLM(tools, self.instruction).agent
             print(f"Model selected is Ollama model in agent.py")
         elif "mixtral" or "mistral" in model: 

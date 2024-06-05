@@ -4,6 +4,7 @@ from fastapi import APIRouter, HTTPException, Request, status
 from fastapi.responses import StreamingResponse
 from llama_index.core.llms import ChatMessage
 from llama_index.core.llms import MessageRole
+from llama_index.agent.openai import OpenAIAgent
 
 from pydantic import BaseModel
 
@@ -38,7 +39,7 @@ def setup_chat_routes(router: APIRouter, agent):
         messages = [ChatMessage(role=m.role, content=m.content) for m in data.messages]
         config = Config()
         model = config.get("model", "model", "gpt-3.5-turbo")
-        if "gpt" in model:
+        if isinstance(agent, OpenAIAgent): 
             response = await agent.astream_chat(last_message.content, messages)
         else:
             response = await agent.achat(last_message.content, messages)
