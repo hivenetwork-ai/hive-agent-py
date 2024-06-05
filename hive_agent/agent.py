@@ -15,7 +15,7 @@ from llama_index.core.agent import FunctionCallingAgentWorker
 from hive_agent.llms import OpenAILLM
 from hive_agent.llms import ClaudeLLM
 from hive_agent.llms import MistralLLM
-from hive_agent.llms import LlamaLLM
+from hive_agent.llms import OllamaLLM
 
 from llama_index.core.llms import ChatMessage
 from llama_index.core.tools import FunctionTool
@@ -86,9 +86,9 @@ class HiveAgent:
             self.__agent = OpenAILLM(tools, self.instruction).agent
         elif "claude" in model: 
             self.__agent = ClaudeLLM(tools, self.instruction).agent 
-        elif "llama" in model: 
-            self.__agent = LlamaLLM(tools, self.instruction).agent
-            print(f"Model selected is Llama in agent.py")
+        elif "ollama" in model: 
+            self.__agent = OllamaLLM(tools, self.instruction).agent
+            print(f"Model selected is Ollama model in agent.py")
         elif "mixtral" or "mistral" in model: 
             print(f"Model selected is Mistral")
             self.__agent = MistralLLM(tools, self.instruction).agent

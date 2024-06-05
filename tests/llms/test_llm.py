@@ -8,7 +8,7 @@ from hive_agent.llms import OpenAILLM
 from hive_agent.llms import OpenAILLM
 from hive_agent.llms import ClaudeLLM
 from hive_agent.llms import MistralLLM
-from hive_agent.llms import LlamaLLM
+from hive_agent.llms import OllamaLLM
 
 @pytest.fixture
 def tools():
@@ -33,7 +33,7 @@ def test_claude_llm_initialization(tools, instruction):
     assert instruction in claude_llm.system_prompt
 
 def test_llama_llm_initialization(tools, instruction):
-    llama_llm = LlamaLLM(tools, instruction)
+    llama_llm = OllamaLLM(tools, instruction)
     assert llama_llm.agent is not None
     assert isinstance(llama_llm.agent, llama_index.core.agent.runner.base.AgentRunner)
     assert llama_llm.tools == tools

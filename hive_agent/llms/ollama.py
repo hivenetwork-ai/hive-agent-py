@@ -1,7 +1,7 @@
 from llama_index.core.settings import Settings
 from llama_index.core.agent import FunctionCallingAgentWorker
 
-class LlamaLLM:
+class OllamaLLM:
     def __init__(self, tools, instruction):
         self.tools = tools
         self.instruction = instruction
@@ -20,11 +20,9 @@ class LlamaLLM:
                 Here is your domain-specific instruction:
                 {self.instruction}
                 """
-        print(f"Llama settings: {Settings.llm}")
         self.agent = FunctionCallingAgentWorker.from_tools(
                 tools,
                 system_prompt=self.system_prompt,
                 llm=Settings.llm,
                 allow_parallel_tool_calls=False,
                 ).as_agent()
-        print(f"Agent is {self.agent}")

@@ -20,11 +20,9 @@ class ClaudeLLM:
                 Here is your domain-specific instruction:
                 {self.instruction}
                 """
-        print(f"Claude settings: {Settings.llm}")
         self.agent = FunctionCallingAgentWorker.from_tools(
                 tools,
                 system_prompt=self.system_prompt,
                 llm= Settings.llm,
                 allow_parallel_tool_calls=False,
                 ).as_agent()
-        print(f"Agent is {self.agent}")

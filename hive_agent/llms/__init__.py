@@ -1,4 +1,4 @@
 from .openai import OpenAILLM
 from .claude import ClaudeLLM
-from .llama import LlamaLLM
+from .ollama import OllamaLLM
 from .mistral import MistralLLM
