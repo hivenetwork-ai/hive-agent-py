@@ -3,7 +3,7 @@ import os
 import logging
 
 class Config:
-    def __init__(self, config_path='../../../hive_config.toml'):
+    def __init__(self, config_path):
         self.config_path = config_path
         self.config = self.load_config()
 

@@ -11,7 +11,7 @@ from eth_account.messages import encode_defunct
 
 from hive_agent.config import Config
 
-config = Config()
+config = Config('../../../hive_config.toml')
 
 logging.basicConfig(stream=sys.stdout, level=config.get_log_level())
 logging.getLogger().addHandler(logging.StreamHandler(stream=sys.stdout))
