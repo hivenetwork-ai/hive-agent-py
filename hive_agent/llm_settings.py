@@ -9,8 +9,7 @@ from hive_agent.config import Config
 from dotenv import load_dotenv
 load_dotenv()
 
-def init_llm_settings():
-    config = Config()
+def init_llm_settings(config):
     model = config.get("model", "model", "gpt-3.5-turbo")
     if "gpt" in model:
         Settings.llm = OpenAI(model=model) 
