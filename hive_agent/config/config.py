@@ -13,6 +13,7 @@ class Config:
             self.config_path = self.config_path[2:]
         if "\\" in self.config_path:
             self.config_path.replace("\\", "/")
+        self.config_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), self.config_path)
         return toml.load(self.config_path)
 
     def get(self, section, key, default=None):
