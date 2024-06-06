@@ -1,5 +1,0 @@
-[model]
-model = "gpt-4-turbo-preview"
-
-[environment]
-type = "dev"
