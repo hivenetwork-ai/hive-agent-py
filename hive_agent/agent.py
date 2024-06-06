@@ -38,7 +38,7 @@ class HiveAgent:
             self,
             name: str,
             functions: List[Callable],
-            config_path: str,
+            config_path= "../../hive_config_example.toml",
             host="0.0.0.0",
             port=8000,
             instruction="",
