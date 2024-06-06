@@ -1,17 +1,9 @@
 import signal
-import sys
-from hive_agent.config import Config
 import pytest
 
 from unittest.mock import MagicMock, patch
 
 from hive_agent.agent import HiveAgent
-import logging
-
-config = Config()
-logging.basicConfig(stream=sys.stdout, level=config.get_log_level())
-logging.getLogger().addHandler(logging.StreamHandler(stream=sys.stdout))
-
 
 @pytest.fixture
 def agent():
@@ -25,6 +17,7 @@ def agent():
         test_agent = HiveAgent(
             name='TestAgent',
             functions=[lambda x: x],
+            config_path='../../tests/hive_config_test.toml',
             host='0.0.0.0',
             port=8000,
             instruction='Test instruction',
@@ -35,6 +28,7 @@ def agent():
 @pytest.mark.asyncio
 async def test_agent_initialization(agent):
     assert agent.name == 'TestAgent'
+    assert agent.config_path == '../../tests/hive_config_test.toml'
     assert agent.host == '0.0.0.0'
     assert agent.port == 8000
     assert agent.instruction == 'Test instruction'

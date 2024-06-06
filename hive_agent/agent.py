@@ -27,17 +27,7 @@ from hive_agent.tools.agent_db import get_db_schemas, text_2_sql
 from dotenv import load_dotenv
 from hive_agent.config import Config
 
-
-
 load_dotenv()
-config = Config()
-
-logging.basicConfig(stream=sys.stdout, level=config.get_log_level())
-logging.getLogger().addHandler(logging.StreamHandler(stream=sys.stdout))
-
-logger = logging.getLogger()
-logger.setLevel(config.get_log_level())
-
 
 class HiveAgent:
     name: str
@@ -48,12 +38,14 @@ class HiveAgent:
             self,
             name: str,
             functions: List[Callable],
+            config_path: str,
             host="0.0.0.0",
             port=8000,
             instruction="",
     ):
         self.name = name
         self.functions = functions
+        self.config_path = config_path
         self.host = host
         self.port = port
         self.app = FastAPI()
@@ -61,8 +53,17 @@ class HiveAgent:
         self.instruction = instruction
         self.optional_dependencies = {}
 
+        self.config = Config(config_path=config_path)
+     
+        logging.basicConfig(stream=sys.stdout, level=self.config.get_log_level())
+        logging.getLogger().addHandler(logging.StreamHandler(stream=sys.stdout))
+
+        self.logger = logging.getLogger()
+        self.logger.setLevel(self.config.get_log_level())
+
         self._check_optional_dependencies()
         self.__setup()
+        
 
 
     def _check_optional_dependencies(self):
@@ -73,7 +74,7 @@ class HiveAgent:
             self.optional_dependencies['web3'] = False
 
     def __setup(self):
-        init_llm_settings()
+        init_llm_settings(self.config)
         custom_tools = self._tools_from_funcs(self.functions)
 
         # TODO: pass db client to db tools directly
@@ -81,16 +82,14 @@ class HiveAgent:
 
         tools = custom_tools + system_tools
 
-        model = config.get("model", "model", "gpt-3.5-turbo")
+        model = self.config.get("model", "model", "gpt-3.5-turbo")
         if "gpt" in model:   
             self.__agent = OpenAILLM(tools, self.instruction).agent
         elif "claude" in model: 
             self.__agent = ClaudeLLM(tools, self.instruction).agent 
         elif "llama" in model: 
             self.__agent = OllamaLLM(tools, self.instruction).agent
-            print(f"Model selected is Ollama model in agent.py")
         elif "mixtral" or "mistral" in model: 
-            print(f"Model selected is Mistral")
             self.__agent = MistralLLM(tools, self.instruction).agent
         else:
             self.__agent = OpenAILLM(tools, self.instruction).agent
@@ -102,7 +101,7 @@ class HiveAgent:
             self.wallet_store.add_wallet()
         else:
             self.wallet_store = None
-            logger.warning("'web3' extras not installed. Web3-related functionality will not be available.")
+            self.logger.warning("'web3' extras not installed. Web3-related functionality will not be available.")
 
         self.__setup_server()
 
@@ -119,7 +118,7 @@ class HiveAgent:
         signal.signal(signal.SIGTERM, self.__signal_handler)
 
     def configure_cors(self):
-        environment = config.get('environment', 'type')  # default to 'development' if not set
+        environment = self.config.get('environment', 'type')  # default to 'development' if not set
 
         if environment == "dev":
             logger = logging.getLogger("uvicorn")
