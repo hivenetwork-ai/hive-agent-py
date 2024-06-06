@@ -9,8 +9,11 @@ class Config:
 
     def load_config(self):
         """Loads the configuration file."""
-        config_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), self.config_path)
-        return toml.load(config_path)
+        if self.config_path.startswith("C:"):
+            self.config_path = self.config_path[2:]
+        if "\\" in self.config_path:
+            self.config_path.replace("\\", "/")
+        return toml.load(self.config_path)
 
     def get(self, section, key, default=None):
         """Gets a value from the configuration."""
