@@ -9,16 +9,6 @@ from eth_account.datastructures import SignedMessage
 from eth_account.signers.local import LocalAccount
 from eth_account.messages import encode_defunct
 
-from hive_agent.config import Config
-
-config = Config()
-
-logging.basicConfig(stream=sys.stdout, level=config.get_log_level())
-logging.getLogger().addHandler(logging.StreamHandler(stream=sys.stdout))
-
-logger = logging.getLogger()
-logger.setLevel(config.get_log_level())
-
 class ImmutableDict:
     def __init__(self):
         self._dict = {}
