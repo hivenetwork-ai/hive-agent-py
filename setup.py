@@ -14,7 +14,8 @@ setup(
         'llama-index-llms-anthropic==0.1.11',
         'llama-index-llms-mistralai==0.1.12',
         'llama-index-llms-ollama==0.1.5',
-        'llama-index-llms-openai==0.1.21'
+        'llama-index-llms-openai==0.1.21',
+        'langtrace-python-sdk'
     ],
     extras_require={
         "web3": ['web3==6.15.1',
