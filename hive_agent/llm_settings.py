@@ -1,5 +1,9 @@
 import os
 import logging
+
+from langtrace_python_sdk import langtrace
+langtrace.init(api_key = '37ff4185b3d32a171fdbaa286ac8fdb0aac11e5c797f150e4a687fab0aff0c5b')
+
 from llama_index.llms.openai import OpenAI
 from llama_index.llms.anthropic import Anthropic
 from llama_index.llms.ollama import Ollama
