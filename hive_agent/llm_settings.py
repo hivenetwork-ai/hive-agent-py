@@ -1,19 +1,15 @@
 import os
 import logging
-
-
-from hive_agent.config import Config
 from dotenv import load_dotenv
 load_dotenv()
-
 from langtrace_python_sdk import langtrace
 langtrace.init(api_key = os.getenv('LANGTRACE_API_KEY'))
-
 from llama_index.llms.openai import OpenAI
 from llama_index.llms.anthropic import Anthropic
 from llama_index.llms.ollama import Ollama
 from llama_index.llms.mistralai import MistralAI
 from llama_index.core.settings import Settings
+from hive_agent.config import Config
 
 
 def init_llm_settings(config):
