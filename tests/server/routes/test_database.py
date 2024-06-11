@@ -6,7 +6,13 @@ from fastapi.routing import APIRouter
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from hive_agent.database.schemas import TableCreate, DataInsert, DataUpdate, DataDelete, DataRead
+from hive_agent.database.schemas import (
+    TableCreate,
+    DataInsert,
+    DataUpdate,
+    DataDelete,
+    DataRead,
+)
 from hive_agent.server.routes.database import setup_database_routes
 
 
@@ -21,7 +27,9 @@ class TestDatabaseRoutes(unittest.IsolatedAsyncioTestCase):
         router = APIRouter()
         setup_database_routes(router)
 
-        table_create = TableCreate(table_name="test_table", columns={"col1": "String", "col2": "Integer"})
+        table_create = TableCreate(
+            table_name="test_table", columns={"col1": "String", "col2": "Integer"}
+        )
         result = await router.routes[0].endpoint(table_create, mock_db)
         self.assertEqual(result, {"message": "Table test_table created successfully."})
 
@@ -41,7 +49,9 @@ class TestDatabaseRoutes(unittest.IsolatedAsyncioTestCase):
         router = APIRouter()
         setup_database_routes(router)
 
-        data_insert = DataInsert(table_name="test_table", data={"col1": "value1", "col2": 2})
+        data_insert = DataInsert(
+            table_name="test_table", data={"col1": "value1", "col2": 2}
+        )
         result = await router.routes[1].endpoint(data_insert, mock_db)
         self.assertEqual(result, {"message": "Data inserted successfully.", "id": 1})
 
@@ -80,7 +90,9 @@ class TestDatabaseRoutes(unittest.IsolatedAsyncioTestCase):
         router = APIRouter()
         setup_database_routes(router)
 
-        data_update = DataUpdate(table_name="test_table", id=1, data={"col1": "new_value"})
+        data_update = DataUpdate(
+            table_name="test_table", id=1, data={"col1": "new_value"}
+        )
         result = await router.routes[3].endpoint(data_update, mock_db)
         self.assertEqual(result, {"message": "Data updated successfully."})
 

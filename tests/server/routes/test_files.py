@@ -79,7 +79,9 @@ async def test_rename_file(client):
 
     response = await client.put("/files/old_name.txt/new_name.txt")
     assert response.status_code == 200
-    assert response.json() == {"message": "File old_name.txt renamed to new_name.txt successfully."}
+    assert response.json() == {
+        "message": "File old_name.txt renamed to new_name.txt successfully."
+    }
 
     # ensure file system updates
     # await asyncio.sleep(5)

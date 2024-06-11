@@ -20,12 +20,13 @@ def get_db_schemas(db_url: str):
     for table_name, table in metadata.tables.items():
         columns = []
         for column in table.columns:
-            columns.append({
-                "name": column.name,
-                "type": str(column.type),
-                "primary_key": column.primary_key,
-                "nullable": column.nullable,
-            })
+            columns.append(
+                {
+                    "name": column.name,
+                    "type": str(column.type),
+                    "primary_key": column.primary_key,
+                    "nullable": column.nullable,
+                }
+            )
         schemas[table_name] = columns
     return schemas
-

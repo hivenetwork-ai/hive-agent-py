@@ -9,11 +9,12 @@ from eth_account.datastructures import SignedMessage
 from eth_account.signers.local import LocalAccount
 from eth_account.messages import encode_defunct
 
+
 class ImmutableDict:
     def __init__(self):
         self._dict = {}
         logging.info("created new ImmutableDict")
-        
+
     def add(self, key, value):
         if key in self._dict:
             logging.error(f"key '{key}' already exists. Cannot update the value.")
@@ -63,7 +64,6 @@ class Wallet:
         signed_transaction = self.__account.sign_transaction(transaction)
         logging.debug(f"Signed transaction for account: {self.__account.address}")
         return signed_transaction
-
 
 
 class WalletStore:

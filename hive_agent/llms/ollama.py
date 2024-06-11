@@ -3,6 +3,6 @@ from llama_index.core.agent import FunctionCallingAgentWorker
 
 from hive_agent.llms.llms import LLMs
 
+
 class OllamaLLM(LLMs):
-        pass   
-    
+    pass

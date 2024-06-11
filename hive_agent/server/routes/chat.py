@@ -8,6 +8,7 @@ from llama_index.agent.openai import OpenAIAgent
 
 from pydantic import BaseModel
 
+
 class Message(BaseModel):
     role: MessageRole
     content: str
@@ -37,7 +38,7 @@ def setup_chat_routes(router: APIRouter, agent):
         # convert messages coming from the request to type ChatMessage
         messages = [ChatMessage(role=m.role, content=m.content) for m in data.messages]
 
-        if isinstance(agent, OpenAIAgent): 
+        if isinstance(agent, OpenAIAgent):
             response = await agent.astream_chat(last_message.content, messages)
         else:
             response = await agent.achat(last_message.content, messages)
@@ -47,7 +48,8 @@ def setup_chat_routes(router: APIRouter, agent):
                 if await request.is_disconnected():
                     break
                 yield token
-        if isinstance(agent, OpenAIAgent): 
+
+        if isinstance(agent, OpenAIAgent):
             return StreamingResponse(event_generator(), media_type="text/plain")
         else:
             return response
