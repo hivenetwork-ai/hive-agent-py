@@ -1,13 +1,19 @@
 import os
 import logging
+
+from dotenv import load_dotenv
+load_dotenv()
+
+if 'LANGTRACE_API_KEY' in os.environ:
+    from langtrace_python_sdk import langtrace
+    langtrace.init(api_key=os.getenv('LANGTRACE_API_KEY'))
+
 from llama_index.llms.openai import OpenAI
 from llama_index.llms.anthropic import Anthropic
 from llama_index.llms.ollama import Ollama
 from llama_index.llms.mistralai import MistralAI
 from llama_index.core.settings import Settings
 from hive_agent.config import Config
-from dotenv import load_dotenv
-load_dotenv()
 
 def init_llm_settings(config):
     model = config.get("model", "model", "gpt-3.5-turbo")
