@@ -29,19 +29,20 @@ from hive_agent.config import Config
 
 load_dotenv()
 
+
 class HiveAgent:
     name: str
-    wallet_store: 'WalletStore' # this attribute will be conditionally initialized
+    wallet_store: "WalletStore"  # this attribute will be conditionally initialized
     __agent: Any
 
     def __init__(
-            self,
-            name: str,
-            functions: List[Callable],
-            config_path= "../../hive_config_example.toml",
-            host="0.0.0.0",
-            port=8000,
-            instruction="",
+        self,
+        name: str,
+        functions: List[Callable],
+        config_path="../../hive_config_example.toml",
+        host="0.0.0.0",
+        port=8000,
+        instruction="",
     ):
         self.name = name
         self.functions = functions
@@ -54,7 +55,7 @@ class HiveAgent:
         self.optional_dependencies = {}
 
         self.config = Config(config_path=config_path)
-     
+
         logging.basicConfig(stream=sys.stdout, level=self.config.get_log_level())
         logging.getLogger().addHandler(logging.StreamHandler(stream=sys.stdout))
 
@@ -63,15 +64,14 @@ class HiveAgent:
 
         self._check_optional_dependencies()
         self.__setup()
-        
-
 
     def _check_optional_dependencies(self):
         try:
             from web3 import Web3
-            self.optional_dependencies['web3'] = True
+
+            self.optional_dependencies["web3"] = True
         except ImportError:
-            self.optional_dependencies['web3'] = False
+            self.optional_dependencies["web3"] = False
 
     def __setup(self):
         init_llm_settings(self.config)
@@ -83,25 +83,27 @@ class HiveAgent:
         tools = custom_tools + system_tools
 
         model = self.config.get("model", "model", "gpt-3.5-turbo")
-        if "gpt" in model:   
+        if "gpt" in model:
             self.__agent = OpenAILLM(tools, self.instruction).agent
-        elif "claude" in model: 
-            self.__agent = ClaudeLLM(tools, self.instruction).agent 
-        elif "llama" in model: 
+        elif "claude" in model:
+            self.__agent = ClaudeLLM(tools, self.instruction).agent
+        elif "llama" in model:
             self.__agent = OllamaLLM(tools, self.instruction).agent
-        elif "mixtral" or "mistral" in model: 
+        elif "mixtral" or "mistral" in model:
             self.__agent = MistralLLM(tools, self.instruction).agent
         else:
             self.__agent = OpenAILLM(tools, self.instruction).agent
 
-
-        if self.optional_dependencies.get('web3'):
+        if self.optional_dependencies.get("web3"):
             from hive_agent.wallet import WalletStore
+
             self.wallet_store = WalletStore()
             self.wallet_store.add_wallet()
         else:
             self.wallet_store = None
-            self.logger.warning("'web3' extras not installed. Web3-related functionality will not be available.")
+            self.logger.warning(
+                "'web3' extras not installed. Web3-related functionality will not be available."
+            )
 
         self.__setup_server()
 
@@ -110,7 +112,7 @@ class HiveAgent:
         return [FunctionTool.from_defaults(fn=func) for func in funcs]
 
     def __setup_server(self):
-       
+
         self.configure_cors()
         setup_routes(self.app, self.__agent)
 
@@ -118,11 +120,15 @@ class HiveAgent:
         signal.signal(signal.SIGTERM, self.__signal_handler)
 
     def configure_cors(self):
-        environment = self.config.get('environment', 'type')  # default to 'development' if not set
+        environment = self.config.get(
+            "environment", "type"
+        )  # default to 'development' if not set
 
         if environment == "dev":
             logger = logging.getLogger("uvicorn")
-            logger.warning("Running in development mode - allowing CORS for all origins")
+            logger.warning(
+                "Running in development mode - allowing CORS for all origins"
+            )
             self.app.add_middleware(
                 CORSMiddleware,
                 allow_origins=["*"],
@@ -133,11 +139,15 @@ class HiveAgent:
 
     async def run_server(self):
         try:
-            config = uvicorn.Config(app=self.app, host=self.host, port=self.port, loop="asyncio")
+            config = uvicorn.Config(
+                app=self.app, host=self.host, port=self.port, loop="asyncio"
+            )
             server = uvicorn.Server(config)
             await server.serve()
         except Exception as e:
-            logging.error(f"unexpected error while running the server: {e}", exc_info=True)
+            logging.error(
+                f"unexpected error while running the server: {e}", exc_info=True
+            )
         finally:
             await self.__cleanup()
 
@@ -146,7 +156,9 @@ class HiveAgent:
             loop = asyncio.get_event_loop()
             loop.run_until_complete(self.run_server())
         except Exception as e:
-            logging.error(f"An error occurred in the main event loop: {e}", exc_info=True)
+            logging.error(
+                f"An error occurred in the main event loop: {e}", exc_info=True
+            )
 
     def chat_history(self) -> List[ChatMessage]:
         return self.__agent.chat_history
@@ -170,7 +182,7 @@ class HiveAgent:
 
     async def __cleanup(self):
         try:
-            if hasattr(self, 'db_session'):
+            if hasattr(self, "db_session"):
                 await self.db_session.close()
                 logging.debug("database connection closed")
         except Exception as e:

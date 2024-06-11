@@ -73,7 +73,6 @@ class TestDatabaseManager(unittest.IsolatedAsyncioTestCase):
         with self.assertRaises(ValueError):
             await db_manager.insert_data("non_existing", data)
 
-
     @patch("hive_agent.database.database.DatabaseManager.__init__")
     async def test_read_data(self, mock_init):
         # mock_session = AsyncMock(spec=AsyncSession)

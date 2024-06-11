@@ -10,10 +10,11 @@ class MockAgent:
     async def astream_chat(self, content, messages):
         async def async_response_gen():
             yield "chat response"
-        return type('MockResponse', (), {"async_response_gen": async_response_gen})
-    
+
+        return type("MockResponse", (), {"async_response_gen": async_response_gen})
+
     async def achat(self, content, messages):
-        return 'chat response'
+        return "chat response"
 
 
 @pytest.fixture
@@ -50,7 +51,7 @@ async def test_chat_last_message_not_user(client):
         "messages": [
             {"role": MessageRole.SYSTEM, "content": "System message"},
             {"role": MessageRole.USER, "content": "User message"},
-            {"role": MessageRole.SYSTEM, "content": "Another system message"}
+            {"role": MessageRole.SYSTEM, "content": "Another system message"},
         ]
     }
     response = await client.post("/api/v1/chat", json=data)
@@ -60,11 +61,7 @@ async def test_chat_last_message_not_user(client):
 
 @pytest.mark.asyncio
 async def test_chat_success(client, agent):
-    data = {
-        "messages": [
-            {"role": MessageRole.USER, "content": "Hello!"}
-        ]
-    }
+    data = {"messages": [{"role": MessageRole.USER, "content": "Hello!"}]}
     response = await client.post("/api/v1/chat", json=data)
     assert response.status_code == status.HTTP_200_OK
     assert response.text == "chat response" or response.text == '"chat response"'

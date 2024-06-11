@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 
 BASE_DIR = "hive-agent-data/files/user"
-ALLOWED_FILE_TYPES = ['application/json', 'text/csv', 'text/plain', 'application/pdf']
+ALLOWED_FILE_TYPES = ["application/json", "text/csv", "text/plain", "application/pdf"]
 
 file_store = FileStore(BASE_DIR)
 
@@ -22,11 +22,18 @@ def setup_files_routes(router: APIRouter):
         for file in files:
             if not file.content_type:
                 logger.warning(f"File {file.filename} has no content type.")
-                raise HTTPException(status_code=400, detail="File content type is missing.")
+                raise HTTPException(
+                    status_code=400, detail="File content type is missing."
+                )
 
             if file.content_type not in ALLOWED_FILE_TYPES:
-                logger.warning(f"Disallowed file type upload attempted: {file.content_type}")
-                raise HTTPException(status_code=400, detail=f"File type {file.content_type} is not allowed.")
+                logger.warning(
+                    f"Disallowed file type upload attempted: {file.content_type}"
+                )
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"File type {file.content_type} is not allowed.",
+                )
 
             try:
                 filename = await file_store.save_file(file)
@@ -62,7 +69,9 @@ def setup_files_routes(router: APIRouter):
                 return {"message": f"File {filename} deleted successfully."}
             else:
                 logger.warning(f"File {filename} not found for deletion")
-                raise HTTPException(status_code=404, detail=f"File {filename} not found.")
+                raise HTTPException(
+                    status_code=404, detail=f"File {filename} not found."
+                )
         except ValueError as e:
             logger.error(f"Value error: {e}")
             raise HTTPException(status_code=400, detail=str(e))
@@ -75,10 +84,14 @@ def setup_files_routes(router: APIRouter):
         try:
             if file_store.rename_file(old_filename, new_filename):
                 logger.info(f"Renamed file from {old_filename} to {new_filename}")
-                return {"message": f"File {old_filename} renamed to {new_filename} successfully."}
+                return {
+                    "message": f"File {old_filename} renamed to {new_filename} successfully."
+                }
             else:
                 logger.warning(f"File {old_filename} not found for renaming")
-                raise HTTPException(status_code=404, detail=f"File {old_filename} not found.")
+                raise HTTPException(
+                    status_code=404, detail=f"File {old_filename} not found."
+                )
         except ValueError as e:
             logger.error(f"Value error: {e}")
             raise HTTPException(status_code=400, detail=str(e))

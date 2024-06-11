@@ -5,7 +5,13 @@ from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from hive_agent.database.database import get_db, DatabaseManager
-from hive_agent.database.schemas import TableCreate, DataInsert, DataUpdate, DataDelete, DataRead
+from hive_agent.database.schemas import (
+    TableCreate,
+    DataInsert,
+    DataUpdate,
+    DataDelete,
+    DataRead,
+)
 
 
 # TODO: get log level from config
@@ -15,7 +21,9 @@ logger = logging.getLogger(__name__)
 
 def setup_database_routes(router: APIRouter):
     @router.post("/database/create-table", response_model=Dict[str, str])
-    async def create_table_handler(table: TableCreate, db: AsyncSession = Depends(get_db)):
+    async def create_table_handler(
+        table: TableCreate, db: AsyncSession = Depends(get_db)
+    ):
         logger.info(f"Received request to create table: {table.table_name}")
         db_manager = DatabaseManager(db)
         try:
@@ -35,7 +43,9 @@ def setup_database_routes(router: APIRouter):
         db_manager = DatabaseManager(db)
         try:
             instance = await db_manager.insert_data(data.table_name, data.data)
-            logger.info(f"Data inserted successfully into table {data.table_name}, id: {instance.id}")
+            logger.info(
+                f"Data inserted successfully into table {data.table_name}, id: {instance.id}"
+            )
             return {"message": "Data inserted successfully.", "id": instance.id}
         except ValueError as e:
             logger.error(f"ValueError: {str(e)}")
@@ -61,11 +71,15 @@ def setup_database_routes(router: APIRouter):
 
     @router.put("/database/update-data", response_model=Dict[str, str])
     async def update_data_handler(data: DataUpdate, db: AsyncSession = Depends(get_db)):
-        logger.info(f"Received request to update data in table: {data.table_name}, id: {data.id}")
+        logger.info(
+            f"Received request to update data in table: {data.table_name}, id: {data.id}"
+        )
         db_manager = DatabaseManager(db)
         try:
             await db_manager.update_data(data.table_name, data.id, data.data)
-            logger.info(f"Data updated successfully in table {data.table_name}, id: {data.id}")
+            logger.info(
+                f"Data updated successfully in table {data.table_name}, id: {data.id}"
+            )
             return {"message": "Data updated successfully."}
         except ValueError as e:
             logger.error(f"ValueError: {str(e)}")
@@ -76,11 +90,15 @@ def setup_database_routes(router: APIRouter):
 
     @router.delete("/database/delete-data", response_model=Dict[str, str])
     async def delete_data_handler(data: DataDelete, db: AsyncSession = Depends(get_db)):
-        logger.info(f"Received request to delete data from table: {data.table_name}, id: {data.id}")
+        logger.info(
+            f"Received request to delete data from table: {data.table_name}, id: {data.id}"
+        )
         db_manager = DatabaseManager(db)
         try:
             await db_manager.delete_data(data.table_name, data.id)
-            logger.info(f"Data deleted successfully from table {data.table_name}, id: {data.id}")
+            logger.info(
+                f"Data deleted successfully from table {data.table_name}, id: {data.id}"
+            )
             return {"message": "Data deleted successfully."}
         except ValueError as e:
             logger.error(f"ValueError: {str(e)}")

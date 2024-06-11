@@ -2,6 +2,7 @@ import toml
 import os
 import logging
 
+
 class Config:
     def __init__(self, config_path):
         self.config_path = config_path
@@ -13,7 +14,9 @@ class Config:
             self.config_path = self.config_path[2:]
         if "\\" in self.config_path:
             self.config_path.replace("\\", "/")
-        self.config_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), self.config_path)
+        self.config_path = os.path.join(
+            os.path.dirname(os.path.realpath(__file__)), self.config_path
+        )
         return toml.load(self.config_path)
 
     def get(self, section, key, default=None):
@@ -29,12 +32,12 @@ class Config:
 
     def save_config(self):
         """Saves the current configuration state to disk."""
-        config_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), self.config_path)
-        with open(config_path, 'w') as f:
+        config_path = os.path.join(
+            os.path.dirname(os.path.realpath(__file__)), self.config_path
+        )
+        with open(config_path, "w") as f:
             toml.dump(self.config, f)
-            
+
     def get_log_level(self):
-        HIVE_AGENT_LOG_LEVEL = os.getenv('HIVE_AGENT_LOG_LEVEL', 'INFO').upper()
+        HIVE_AGENT_LOG_LEVEL = os.getenv("HIVE_AGENT_LOG_LEVEL", "INFO").upper()
         return getattr(logging, HIVE_AGENT_LOG_LEVEL, logging.INFO)
-    
-    

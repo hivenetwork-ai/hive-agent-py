@@ -74,7 +74,9 @@ class FileStore:
                 logger.info(f"Renamed file from {old_filename} to {new_filename}")
                 return True
             except Exception as e:
-                logger.error(f"Failed to rename file from {old_filename} to {new_filename}: {e}")
+                logger.error(
+                    f"Failed to rename file from {old_filename} to {new_filename}: {e}"
+                )
                 raise IOError(f"Error renaming file {old_filename}")
         else:
             logger.warning(f"Attempted to rename non-existent file: {old_filename}")

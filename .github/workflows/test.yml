@@ -23,6 +23,10 @@ jobs:
           pip install -e .[web3]
           pip install -r requirements-dev.txt
 
+      - name: Run Black
+        run: |
+          black hive_agent tests
+
       - name: Run tests with pytest
         run: |
           pytest
