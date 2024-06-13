@@ -10,7 +10,6 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
-
 # TODO: get log level from config
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -40,6 +39,26 @@ async def initialize_db():
 async def get_db():
     async with SessionLocal() as session:
         yield session
+
+
+async def setup_chats_table(db: AsyncSession):
+    db_manager = DatabaseManager(db)
+    table_exists = await db_manager.get_table_definition("chats")
+
+    if table_exists:
+        logger.info("Table 'chats' already exists. Skipping creation.")
+        return
+
+    columns = {
+        "user_id": "String",
+        "session_id": "String",
+        "message": "String",
+        "role": "String",
+        "timestamp": "String",
+        # TODO: add agent_id
+    }
+    await db_manager.create_table("chats", columns)
+    logger.info("Table 'chats' created successfully.")
 
 
 class DatabaseManager:
