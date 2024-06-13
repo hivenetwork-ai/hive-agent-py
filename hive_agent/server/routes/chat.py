@@ -1,55 +1,86 @@
+import logging
+from datetime import datetime
 from typing import List
 
-from fastapi import APIRouter, HTTPException, Request, status
+from fastapi import APIRouter, HTTPException, Depends, Request, Query, status
 from fastapi.responses import StreamingResponse
-from llama_index.core.llms import ChatMessage
-from llama_index.core.llms import MessageRole
+from sqlalchemy.ext.asyncio import AsyncSession
+from hive_agent.database.database import get_db, DatabaseManager
+from hive_agent.chat import ChatManager
+from hive_agent.chat.schemas import ChatHistorySchema, ChatRequest
+from llama_index.core.llms import ChatMessage, MessageRole
 from llama_index.agent.openai import OpenAIAgent
 
-from pydantic import BaseModel
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
-class Message(BaseModel):
-    role: MessageRole
-    content: str
-
-
-class ChatData(BaseModel):
-    messages: List[Message]
-
-
-def setup_chat_routes(router: APIRouter, agent):
-
+def setup_chat_routes(router: APIRouter, llm_instance):
     @router.post("/chat")
-    async def chat(request: Request, data: ChatData):
-        if len(data.messages) == 0:
+    async def chat(
+        request: Request,
+        chat_request: ChatRequest,
+        db: AsyncSession = Depends(get_db),
+    ):
+        user_id = chat_request.user_id
+        session_id = chat_request.session_id
+        chat_data = chat_request.chat_data
+
+        chat_manager = ChatManager(llm_instance, user_id=user_id, session_id=session_id)
+        db_manager = DatabaseManager(db)
+
+        if len(chat_data.messages) == 0:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="No messages provided",
             )
 
-        last_message = data.messages.pop()
+        last_message = chat_data.messages.pop()
         if last_message.role != MessageRole.USER:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Last message must be from user",
             )
 
-        # convert messages coming from the request to type ChatMessage
-        messages = [ChatMessage(role=m.role, content=m.content) for m in data.messages]
+        last_chat_message = ChatMessage(role=last_message.role, content=last_message.content)
+        messages = [ChatMessage(role=m.role, content=m.content) for m in chat_data.messages]
 
-        if isinstance(agent, OpenAIAgent):
-            response = await agent.astream_chat(last_message.content, messages)
-        else:
-            response = await agent.achat(last_message.content, messages)
+        response = await chat_manager.generate_response(
+            db_manager, messages, last_chat_message
+        )
 
-        async def event_generator():
-            async for token in response.async_response_gen():
-                if await request.is_disconnected():
-                    break
-                yield token
-
-        if isinstance(agent, OpenAIAgent):
+        if isinstance(chat_manager.llm, OpenAIAgent):
+            async def event_generator():
+                for token in response:
+                    if await request.is_disconnected():
+                        break
+                    yield token
             return StreamingResponse(event_generator(), media_type="text/plain")
         else:
             return response
+
+    @router.get("/chat_history", response_model=List[ChatHistorySchema])
+    async def get_chat_history(
+        user_id: str = Query(...),
+        session_id: str = Query(...),
+        db: AsyncSession = Depends(get_db)
+    ):
+        chat_manager = ChatManager(llm_instance, user_id=user_id, session_id=session_id)
+        db_manager = DatabaseManager(db)
+        chat_history = await chat_manager.get_messages(db_manager)
+        if not chat_history:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="No chat history found for this user",
+            )
+
+        return [
+            ChatHistorySchema(
+                user_id=user_id,
+                session_id=session_id,
+                message=msg.content,
+                role=msg.role,
+                timestamp=str(datetime.utcnow()),
+            )
+            for msg in chat_history
+        ]

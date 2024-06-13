@@ -12,12 +12,16 @@ This endpoint processes natural language queries and returns responses from the 
 
 ```json
 {
-  "messages": [
-    {
-      "role": "user",
-      "content": "Your query here"
-    }
-  ]
+  "user_id": "user123",
+  "session_id": "session123",
+  "chat_data": {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Your query here"
+      }
+    ]
+  }
 }
 ```
 
@@ -30,7 +34,34 @@ This endpoint processes natural language queries and returns responses from the 
 curl --request POST \
   --url http://localhost:8000/api/v1/chat \
   --header 'Content-Type: application/json' \
-  --data '{"messages": [{"role": "user", "content": "What is the capital of France?"}]}'
+  --data '{
+    "user_id": "user123",
+    "session_id": "session123",
+    "chat_data": {
+        "messages": [
+            { "role": "user", "content": "What is the capital of France?" }
+        ]
+    }
+  }'
+```
+
+### **GET /api/v1/chat_history**
+
+This endpoint retrieves the chat history for a specified user and session.
+
+**Query Parameters:**
+
+- `user_id`: The user ID.
+- `session_id`: The session ID.
+
+**Response:**
+- A JSON array of the chat history.
+
+**Usage Example:**
+
+```bash
+curl --request GET \
+  --url 'http://localhost:8000/api/v1/chat_history?user_id=user123&session_id=session123'
 ```
 
 ## Database Endpoints

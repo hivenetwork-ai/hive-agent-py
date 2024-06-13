@@ -1,19 +1,20 @@
 import pytest
 from fastapi import APIRouter, FastAPI, status
 from httpx import AsyncClient
+from unittest.mock import AsyncMock, patch
 
-from llama_index.core.llms import MessageRole
+from llama_index.core.llms import ChatMessage, MessageRole
 from hive_agent.server.routes.chat import setup_chat_routes
 
 
 class MockAgent:
-    async def astream_chat(self, content, messages):
+    async def astream_chat(self, content, chat_history):
         async def async_response_gen():
             yield "chat response"
 
         return type("MockResponse", (), {"async_response_gen": async_response_gen})
 
-    async def achat(self, content, messages):
+    async def achat(self, content, chat_history):
         return "chat response"
 
 
@@ -39,29 +40,68 @@ async def client(app):
 
 @pytest.mark.asyncio
 async def test_chat_no_messages(client):
-    data = {"messages": []}
-    response = await client.post("/api/v1/chat", json=data)
+    payload = {"user_id": "user1", "session_id": "session1", "chat_data": {"messages": []}}
+    response = await client.post("/api/v1/chat", json=payload)
     assert response.status_code == status.HTTP_400_BAD_REQUEST
     assert "No messages provided" in response.json()["detail"]
 
 
 @pytest.mark.asyncio
 async def test_chat_last_message_not_user(client):
-    data = {
-        "messages": [
-            {"role": MessageRole.SYSTEM, "content": "System message"},
-            {"role": MessageRole.USER, "content": "User message"},
-            {"role": MessageRole.SYSTEM, "content": "Another system message"},
-        ]
+    payload = {
+        "user_id": "user1",
+        "session_id": "session1",
+        "chat_data": {
+            "messages": [
+                {"role": MessageRole.SYSTEM, "content": "System message"},
+                {"role": MessageRole.USER, "content": "User message"},
+                {"role": MessageRole.SYSTEM, "content": "Another system message"},
+            ]
+        },
     }
-    response = await client.post("/api/v1/chat", json=data)
+    response = await client.post("/api/v1/chat", json=payload)
     assert response.status_code == status.HTTP_400_BAD_REQUEST
     assert "Last message must be from user" in response.json()["detail"]
 
 
 @pytest.mark.asyncio
 async def test_chat_success(client, agent):
-    data = {"messages": [{"role": MessageRole.USER, "content": "Hello!"}]}
-    response = await client.post("/api/v1/chat", json=data)
-    assert response.status_code == status.HTTP_200_OK
-    assert response.text == "chat response" or response.text == '"chat response"'
+    mock_chat_manager = AsyncMock()
+    mock_chat_manager.generate_response.return_value = "chat response"
+
+    with patch("hive_agent.server.routes.chat.ChatManager", return_value=mock_chat_manager):
+        payload = {
+            "user_id": "user1",
+            "session_id": "session1",
+            "chat_data": {"messages": [{"role": MessageRole.USER, "content": "Hello!"}]},
+        }
+        response = await client.post("/api/v1/chat", json=payload)
+        assert response.status_code == status.HTTP_200_OK
+        assert response.text == "chat response" or response.text == '"chat response"'
+
+
+@pytest.mark.asyncio
+async def test_get_chat_history_success(client):
+    user_id = "user1"
+    session_id = "session1"
+    expected_chat_history = [
+        {"role": MessageRole.USER, "content": "Hello!"},
+        {"role": MessageRole.ASSISTANT, "content": "Hi there!"},
+    ]
+
+    mock_chat_manager = AsyncMock()
+    mock_chat_manager.get_messages.return_value = [
+        ChatMessage(role=msg["role"], content=msg["content"])
+        for msg in expected_chat_history
+    ]
+
+    with patch("hive_agent.server.routes.chat.ChatManager", return_value=mock_chat_manager):
+        response = await client.get(f"/api/v1/chat_history?user_id={user_id}&session_id={session_id}")
+        assert response.status_code == status.HTTP_200_OK
+
+        response_data = response.json()
+        assert len(response_data) == len(expected_chat_history)
+
+        for expected_msg, actual_msg in zip(expected_chat_history, response_data):
+            assert actual_msg["role"] == expected_msg["role"]
+            assert actual_msg["message"] == expected_msg["content"]
