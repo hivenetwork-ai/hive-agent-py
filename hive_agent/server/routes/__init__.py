@@ -19,15 +19,8 @@ def setup_routes(app: FastAPI, agent: Any):
 
     @app.on_event("startup")
     async def startup_event():
-        db_url = os.getenv("HIVE_AGENT_DATABASE_URL")
-        if db_url:
-            print(f"db url in startup_event: {db_url}")
-        else:
-            print("HIVE_AGENT_DATABASE_URL is not set")
 
         await initialize_db()
-
-        print(f'db url after init is: {os.getenv("HIVE_AGENT_DATABASE_URL")}')
 
         async for db in get_db():
             await setup_chats_table(db)
