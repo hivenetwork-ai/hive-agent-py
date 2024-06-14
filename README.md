@@ -34,6 +34,33 @@ You need to specify an `OPENAI_API_KEY` in a _.env_ file in this directory.
 
 Make a copy of the [.env.example](.env.example) file and rename it to _.env_.
 
+## Configuration Setup
+
+To use a configuration file with your `HiveAgent`, follow these steps:
+
+1. **Create a Configuration File**:
+
+   - Create a TOML file (e.g., `hive_config.toml`) in your project directory. (See [hive_config_example.toml](./hive_config_example.toml)).
+
+2. **Specify the Configuration Path**:
+
+   - When creating a `HiveAgent` instance, provide the relative or absolute path to your configuration file.
+   ```python
+   from hive_agent import HiveAgent
+
+   import os
+
+   def get_config_path(filename):
+       return os.path.abspath(os.path.join(os.path.dirname(__file__), filename))
+
+   simple_agent = HiveAgent(
+       name="Simple Agent",
+       functions=[],
+       instruction="your instructions for this agent's goal",
+       config_path=get_config_path("hive_config.toml") # ./hive_config.toml works too 
+   )
+   ```
+
 ## Usage
 
 First import the `HiveAgent` class:
@@ -170,6 +197,10 @@ $ poetry install --no-root
 
 ### Testing
 
+- Make sure you're in the `tests/` directory:
+```sh
+$ cd tests/
+```
 - Run the test suite:
 ```sh
 $ pytest
