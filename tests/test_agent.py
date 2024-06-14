@@ -20,7 +20,7 @@ def agent():
         test_agent = HiveAgent(
             name="TestAgent",
             functions=[lambda x: x],
-            config_path="../../tests/hive_config_test.toml",
+            config_path="./hive_config_test.toml",
             host="0.0.0.0",
             port=8000,
             instruction="Test instruction",
@@ -31,7 +31,7 @@ def agent():
 @pytest.mark.asyncio
 async def test_agent_initialization(agent):
     assert agent.name == "TestAgent"
-    assert agent.config_path == "../../tests/hive_config_test.toml"
+    assert agent.config_path == "./hive_config_test.toml"
     assert agent.host == "0.0.0.0"
     assert agent.port == 8000
     assert agent.instruction == "Test instruction"
