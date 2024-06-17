@@ -1,6 +1,5 @@
 from datetime import datetime
 from typing import List
-import json
 from llama_index.agent.openai import OpenAIAgent
 from llama_index.core.llms import ChatMessage, MessageRole
 
@@ -56,9 +55,6 @@ class ChatManager:
         else:
             response = await self.llm.achat(last_message.content, chat_history=chat_history)
             assistant_message = response.response if hasattr(response, 'response') else str(response)
-        print(f"last message.content: {last_message.content}")
-
-        print(f"assistant message: {assistant_message}")
 
         await self.add_message(db_manager, MessageRole.ASSISTANT, assistant_message)
 
