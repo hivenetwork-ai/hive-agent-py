@@ -18,7 +18,8 @@ class ChatManager:
         self, db_manager: DatabaseManager, role: str, content: str
     ):
         if not isinstance(content, str):
-            content = json.dumps(content.__dict__)
+            content = content.response
+
         message = ChatMessage(role=role, content=content)
         await db_manager.insert_data(
             "chats",
@@ -54,7 +55,10 @@ class ChatManager:
             assistant_message = "".join([token async for token in response_stream.async_response_gen()])
         else:
             response = await self.llm.achat(last_message.content, chat_history=chat_history)
-            assistant_message = response
+            assistant_message = response.response if hasattr(response, 'response') else str(response)
+        print(f"last message.content: {last_message.content}")
+
+        print(f"assistant message: {assistant_message}")
 
         await self.add_message(db_manager, MessageRole.ASSISTANT, assistant_message)
 
