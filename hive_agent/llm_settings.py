@@ -27,7 +27,7 @@ def init_llm_settings(config):
         Settings.llm = Anthropic(model=model, api_key=os.getenv("ANTHROPIC_API_KEY"))
         logging.info(f"Claude model selected")
     elif "llama" in model:
-        Settings.llm = Ollama(model="llama3", request_timeout=240.0)
+        Settings.llm = Ollama(model="llama3", request_timeout=config.get("timeout", "ollama", 240))
         logging.info(f"Ollama model selected")
     elif "mixtral" or "mistral" in model:
         Settings.llm = MistralAI(model=model, api_key=os.getenv("MISTRAL_API_KEY"))
