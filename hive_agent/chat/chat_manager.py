@@ -16,8 +16,6 @@ class ChatManager:
     async def add_message(
         self, db_manager: DatabaseManager, role: str, content: str
     ):
-        if not isinstance(content, str):
-            content = content.response
 
         message = ChatMessage(role=role, content=content)
         await db_manager.insert_data(
