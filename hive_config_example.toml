@@ -5,4 +5,4 @@ model = "gpt-4-turbo-preview"
 type = "dev"
 
 [timeout]
-ollama = 500
+llm = 30
