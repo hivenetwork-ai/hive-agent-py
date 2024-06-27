@@ -36,7 +36,7 @@ async def test_agent_initialization(agent):
     assert agent.host == "0.0.0.0"
     assert agent.port == 8000
     assert agent.instruction == "Test instruction"
-    assert agent.role == "user"
+    assert agent.__role__ == "user"
 
 
 def test_server_setup(agent):
