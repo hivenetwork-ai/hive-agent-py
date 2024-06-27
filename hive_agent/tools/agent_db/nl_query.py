@@ -7,12 +7,9 @@ from llama_index.core.query_engine import NLSQLTableQueryEngine
 from llama_index.llms.openai import OpenAI
 
 from sqlalchemy import create_engine
-
+from llama_index.core.settings import Settings
 
 load_dotenv()
-
-llm = OpenAI(temperature=0.1, model=os.getenv("MODEL", "gpt-3.5-turbo"))
-
 
 def text_2_sql(db_url: str, prompt: str, tables=None):
     """
@@ -31,7 +28,7 @@ def text_2_sql(db_url: str, prompt: str, tables=None):
     sql_database = SQLDatabase(engine, include_tables=tables)
 
     query_engine = NLSQLTableQueryEngine(
-        sql_database=sql_database, tables=["entries"], llm=llm
+        sql_database=sql_database, tables=["entries"], llm=Settings.llm
     )
 
     answer = query_engine.query(prompt)

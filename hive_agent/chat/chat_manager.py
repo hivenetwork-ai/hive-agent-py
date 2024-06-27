@@ -1,6 +1,5 @@
 from datetime import datetime
 from typing import List
-
 from llama_index.agent.openai import OpenAIAgent
 from llama_index.core.llms import ChatMessage, MessageRole
 
@@ -17,6 +16,7 @@ class ChatManager:
     async def add_message(
         self, db_manager: DatabaseManager, role: str, content: str
     ):
+
         message = ChatMessage(role=role, content=content)
         await db_manager.insert_data(
             "chats",
@@ -52,7 +52,7 @@ class ChatManager:
             assistant_message = "".join([token async for token in response_stream.async_response_gen()])
         else:
             response = await self.llm.achat(last_message.content, chat_history=chat_history)
-            assistant_message = response.message
+            assistant_message = response.response if hasattr(response, 'response') else str(response)
 
         await self.add_message(db_manager, MessageRole.ASSISTANT, assistant_message)
 

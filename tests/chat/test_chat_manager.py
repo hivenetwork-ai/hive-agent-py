@@ -12,7 +12,7 @@ class MockAgent:
         return type("MockResponse", (), {"async_response_gen": async_response_gen})
 
     async def achat(self, content, chat_history=None):
-        return type("MockResponse", (), {"message": "chat response"})
+        return type("MockResponse", (), {"response": "chat response"})
 
 
 class MockDatabaseManager:
@@ -44,13 +44,14 @@ async def test_add_message(agent, db_manager):
     assert len(messages) == 1
     assert messages[0].content == "Hello!"
 
-
 @pytest.mark.asyncio
 async def test_generate_response(agent, db_manager):
     chat_manager = ChatManager(agent, user_id="123", session_id="abc")
     user_message = ChatMessage(role=MessageRole.USER, content="Hello!")
+
     response = await chat_manager.generate_response(db_manager, [user_message], user_message)
     assert response == "chat response"
+    
     messages = await chat_manager.get_messages(db_manager)
     assert len(messages) == 2
     assert messages[0].content == "Hello!"

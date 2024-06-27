@@ -3,3 +3,6 @@ model = "gpt-4-turbo-preview"
 
 [environment]
 type = "dev"
+
+[timeout]
+llm = 30
