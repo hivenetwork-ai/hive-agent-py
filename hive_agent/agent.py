@@ -43,6 +43,7 @@ class HiveAgent:
         host="0.0.0.0",
         port=8000,
         instruction="",
+        role=""
     ):
         self.name = name
         self.functions = functions
@@ -52,6 +53,7 @@ class HiveAgent:
         self.app = FastAPI()
         self.shutdown_event = asyncio.Event()
         self.instruction = instruction
+        self.__role__ = role
         self.optional_dependencies = {}
 
         self.config = Config(config_path=config_path)
