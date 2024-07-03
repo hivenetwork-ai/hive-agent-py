@@ -44,15 +44,47 @@ async def test_add_message(agent, db_manager):
     assert len(messages) == 1
     assert messages[0].content == "Hello!"
 
+
 @pytest.mark.asyncio
 async def test_generate_response(agent, db_manager):
     chat_manager = ChatManager(agent, user_id="123", session_id="abc")
     user_message = ChatMessage(role=MessageRole.USER, content="Hello!")
 
-    response = await chat_manager.generate_response(db_manager, [user_message], user_message)
+    response = await chat_manager.generate_response(
+        db_manager, [user_message], user_message
+    )
     assert response == "chat response"
-    
+
     messages = await chat_manager.get_messages(db_manager)
     assert len(messages) == 2
     assert messages[0].content == "Hello!"
     assert messages[1].content == "chat response"
+
+
+@pytest.mark.asyncio
+async def test_get_all_chats_for_user(agent, db_manager):
+    chat_manager1 = ChatManager(agent, user_id="123", session_id="abc")
+    await chat_manager1.add_message(db_manager, MessageRole.USER, "Hello in abc")
+    await chat_manager1.add_message(
+        db_manager, MessageRole.ASSISTANT, "Response in abc"
+    )
+
+    chat_manager2 = ChatManager(agent, user_id="123", session_id="def")
+    await chat_manager2.add_message(db_manager, MessageRole.USER, "Hello in def")
+    await chat_manager2.add_message(
+        db_manager, MessageRole.ASSISTANT, "Response in def"
+    )
+
+    chat_manager = ChatManager(agent, user_id="123", session_id="")
+    all_chats = await chat_manager.get_all_chats_for_user(db_manager)
+
+    assert "abc" in all_chats
+    assert "def" in all_chats
+
+    assert len(all_chats["abc"]) == 2
+    assert all_chats["abc"][0]["message"] == "Hello in abc"
+    assert all_chats["abc"][1]["message"] == "Response in abc"
+
+    assert len(all_chats["def"]) == 2
+    assert all_chats["def"][0]["message"] == "Hello in def"
+    assert all_chats["def"][1]["message"] == "Response in def"

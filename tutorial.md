@@ -64,6 +64,24 @@ curl --request GET \
   --url 'http://localhost:8000/api/v1/chat_history?user_id=user123&session_id=session123'
 ```
 
+### **GET /api/v1/all_chats**
+
+This endpoint retrieves all chats for a specified user, organized by session ID.
+
+**Query Parameters:**
+
+- `user_id`: The user ID.
+
+**Response:**
+- A JSON object where each key is a `session_id` and the value is an array of chat messages for that session.
+
+**Usage Example:**
+
+```bash
+curl --request GET \
+  --url 'http://localhost:8000/api/v1/all_chats?user_id=user123'
+```
+
 ## Database Endpoints
 Ensure you set the `HIVE_AGENT_DATABASE_URL` environment variable.
 
@@ -228,7 +246,7 @@ curl --request POST \
   --form 'files=@path/to/your/file2.txt'
 ```
 
-### GET /api/v1/files/
+### **GET /api/v1/files/**
 
 This endpoint lists all files stored on the server.
 
@@ -241,7 +259,7 @@ curl --request GET \
   --url http://localhost:8000/api/v1/files/
 ```
 
-### PUT /api/v1/files/{old_filename}/{new_filename}
+### **PUT /api/v1/files/{old_filename}/{new_filename}**
 
 This endpoint renames a specified file on the server.
 
@@ -259,7 +277,7 @@ curl --request PUT \
   --url http://localhost:8000/api/v1/files/old_name.txt/new_name.txt
 ```
 
-### DELETE /api/v1/files/{filename}
+### **DELETE /api/v1/files/{filename}**
 
 This endpoint deletes a specified file from the server.
 

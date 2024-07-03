@@ -13,4 +13,3 @@ class ClaudeLLM(LLMs):
             llm=Settings.llm,
             allow_parallel_tool_calls=False,
         ).as_agent()
-

@@ -43,7 +43,7 @@ class HiveAgent:
         host="0.0.0.0",
         port=8000,
         instruction="",
-        role=""
+        role="",
     ):
         self.name = name
         self.functions = functions

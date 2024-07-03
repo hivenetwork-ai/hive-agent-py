@@ -42,19 +42,25 @@ def setup_chat_routes(router: APIRouter, llm_instance):
                 detail="Last message must be from user",
             )
 
-        last_chat_message = ChatMessage(role=last_message.role, content=last_message.content)
-        messages = [ChatMessage(role=m.role, content=m.content) for m in chat_data.messages]
+        last_chat_message = ChatMessage(
+            role=last_message.role, content=last_message.content
+        )
+        messages = [
+            ChatMessage(role=m.role, content=m.content) for m in chat_data.messages
+        ]
 
         response = await chat_manager.generate_response(
             db_manager, messages, last_chat_message
         )
 
         if isinstance(chat_manager.llm, OpenAIAgent):
+
             async def event_generator():
                 for token in response:
                     if await request.is_disconnected():
                         break
                     yield token
+
             return StreamingResponse(event_generator(), media_type="text/plain")
         else:
             return response
@@ -63,7 +69,7 @@ def setup_chat_routes(router: APIRouter, llm_instance):
     async def get_chat_history(
         user_id: str = Query(...),
         session_id: str = Query(...),
-        db: AsyncSession = Depends(get_db)
+        db: AsyncSession = Depends(get_db),
     ):
         chat_manager = ChatManager(llm_instance, user_id=user_id, session_id=session_id)
         db_manager = DatabaseManager(db)
@@ -84,3 +90,19 @@ def setup_chat_routes(router: APIRouter, llm_instance):
             )
             for msg in chat_history
         ]
+
+    @router.get("/all_chats")
+    async def get_all_chats(
+        user_id: str = Query(...), db: AsyncSession = Depends(get_db)
+    ):
+        chat_manager = ChatManager(llm_instance, user_id=user_id, session_id="")
+        db_manager = DatabaseManager(db)
+        all_chats = await chat_manager.get_all_chats_for_user(db_manager)
+
+        if not all_chats:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="No chats found for this user",
+            )
+
+        return all_chats
