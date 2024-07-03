@@ -2,6 +2,7 @@ import toml
 import os
 import logging
 
+
 class Config:
     def __init__(self, config_path):
         self.config_path = self.resolve_path(config_path)

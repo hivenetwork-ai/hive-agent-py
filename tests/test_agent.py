@@ -24,7 +24,7 @@ def agent():
             host="0.0.0.0",
             port=8000,
             instruction="Test instruction",
-            role="leader"
+            role="leader",
         )
     return test_agent
 

@@ -11,6 +11,7 @@ from llama_index.core.settings import Settings
 
 load_dotenv()
 
+
 def text_2_sql(db_url: str, prompt: str, tables=None):
     """
     Convert a natural language prompt into an SQL query and execute it against the specified database.

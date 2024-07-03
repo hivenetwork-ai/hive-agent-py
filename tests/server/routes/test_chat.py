@@ -40,7 +40,11 @@ async def client(app):
 
 @pytest.mark.asyncio
 async def test_chat_no_messages(client):
-    payload = {"user_id": "user1", "session_id": "session1", "chat_data": {"messages": []}}
+    payload = {
+        "user_id": "user1",
+        "session_id": "session1",
+        "chat_data": {"messages": []},
+    }
     response = await client.post("/api/v1/chat", json=payload)
     assert response.status_code == status.HTTP_400_BAD_REQUEST
     assert "No messages provided" in response.json()["detail"]
@@ -69,11 +73,15 @@ async def test_chat_success(client, agent):
     mock_chat_manager = AsyncMock()
     mock_chat_manager.generate_response.return_value = "chat response"
 
-    with patch("hive_agent.server.routes.chat.ChatManager", return_value=mock_chat_manager):
+    with patch(
+        "hive_agent.server.routes.chat.ChatManager", return_value=mock_chat_manager
+    ):
         payload = {
             "user_id": "user1",
             "session_id": "session1",
-            "chat_data": {"messages": [{"role": MessageRole.USER, "content": "Hello!"}]},
+            "chat_data": {
+                "messages": [{"role": MessageRole.USER, "content": "Hello!"}]
+            },
         }
         response = await client.post("/api/v1/chat", json=payload)
         assert response.status_code == status.HTTP_200_OK
@@ -95,8 +103,12 @@ async def test_get_chat_history_success(client):
         for msg in expected_chat_history
     ]
 
-    with patch("hive_agent.server.routes.chat.ChatManager", return_value=mock_chat_manager):
-        response = await client.get(f"/api/v1/chat_history?user_id={user_id}&session_id={session_id}")
+    with patch(
+        "hive_agent.server.routes.chat.ChatManager", return_value=mock_chat_manager
+    ):
+        response = await client.get(
+            f"/api/v1/chat_history?user_id={user_id}&session_id={session_id}"
+        )
         assert response.status_code == status.HTTP_200_OK
 
         response_data = response.json()
@@ -105,3 +117,38 @@ async def test_get_chat_history_success(client):
         for expected_msg, actual_msg in zip(expected_chat_history, response_data):
             assert actual_msg["role"] == expected_msg["role"]
             assert actual_msg["message"] == expected_msg["content"]
+
+
+@pytest.mark.asyncio
+async def test_get_all_chats_success(client):
+    user_id = "user1"
+    expected_all_chats = {
+        "session1": [
+            {"message": "Hello in session1", "role": "USER", "timestamp": "timestamp1"},
+            {
+                "message": "Response in session1",
+                "role": "ASSISTANT",
+                "timestamp": "timestamp2",
+            },
+        ],
+        "session2": [
+            {"message": "Hello in session2", "role": "USER", "timestamp": "timestamp3"},
+            {
+                "message": "Response in session2",
+                "role": "ASSISTANT",
+                "timestamp": "timestamp4",
+            },
+        ],
+    }
+
+    mock_chat_manager = AsyncMock()
+    mock_chat_manager.get_all_chats_for_user.return_value = expected_all_chats
+
+    with patch(
+        "hive_agent.server.routes.chat.ChatManager", return_value=mock_chat_manager
+    ):
+        response = await client.get(f"/api/v1/all_chats?user_id={user_id}")
+        assert response.status_code == status.HTTP_200_OK
+
+        response_data = response.json()
+        assert response_data == expected_all_chats
