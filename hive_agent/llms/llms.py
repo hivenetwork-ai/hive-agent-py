@@ -3,8 +3,9 @@ from llama_index.core.agent import FunctionCallingAgentWorker
 
 
 class LLMs:
-    def __init__(self, tools, instruction):
+    def __init__(self, tools,instruction,tool_retriever=None):
         self.tools = tools
+        self.tool_retriever = tool_retriever
         self.instruction = instruction
         self.system_prompt = f"""You are a domain-specific assistant that is helpful, respectful and honest. Always 
                 answer as helpfuly as possible, while being safe. Your answers should not include any harmful, 
