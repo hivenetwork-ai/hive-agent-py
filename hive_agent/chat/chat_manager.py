@@ -1,3 +1,4 @@
+import os
 from datetime import datetime
 from typing import List
 from llama_index.agent.openai import OpenAIAgent
@@ -14,17 +15,20 @@ class ChatManager:
         self.chat_store_key = f"{user_id}_{session_id}"
 
     async def add_message(self, db_manager: DatabaseManager, role: str, content: str):
-
         message = ChatMessage(role=role, content=content)
-        await db_manager.insert_data(
-            "chats",
-            {
+        data = {
                 "user_id": self.user_id,
                 "session_id": self.session_id,
                 "message": content,
                 "role": role,
                 "timestamp": datetime.utcnow().isoformat(),
-            },
+            }
+        if "HIVE_AGENT_ID" in os.environ:
+            data["agent_id"] = os.getenv("HIVE_AGENT_ID")
+
+        await db_manager.insert_data(
+            table_name="chats",
+            data=data,
         )
 
     async def get_messages(self, db_manager: DatabaseManager):
