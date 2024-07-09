@@ -5,9 +5,10 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-def basic_retrieve(tools: list,required_exts: list):
 
-    retreive_data_path="./hive-agent-data/files/user/"
+def basic_retrieve(tools: list, required_exts: list):
+
+    retreive_data_path = "./hive-agent-data/files/user/"
 
     reader = SimpleDirectoryReader(
         input_dir=retreive_data_path,

@@ -22,12 +22,14 @@ from llama_index.core.llms import ChatMessage
 from llama_index.core.tools import FunctionTool
 
 from hive_agent.llm_settings import init_llm_settings
-from hive_agent.server.routes import setup_routes,files
+from hive_agent.server.routes import setup_routes, files
 from hive_agent.tools.agent_db import get_db_schemas, text_2_sql, basic_retrieve
 
 from dotenv import load_dotenv
 from hive_agent.config import Config
+
 load_dotenv()
+
 
 class HiveAgent:
     name: str
@@ -43,8 +45,8 @@ class HiveAgent:
         port=8000,
         instruction="",
         role="",
-        retrieve = False,
-        required_exts = [".md"]
+        retrieve=False,
+        required_exts=[".md"],
     ):
         self.name = name
         self.functions = functions
@@ -84,14 +86,22 @@ class HiveAgent:
         system_tools = self._tools_from_funcs([get_db_schemas, text_2_sql])
 
         tools = custom_tools + system_tools
-        
-        is_base_dir_not_empty = lambda: os.path.exists(files.BASE_DIR) and (os.path.getsize(files.BASE_DIR) > 0 if os.path.isfile(files.BASE_DIR) else bool(os.listdir(files.BASE_DIR)) if os.path.isdir(files.BASE_DIR) else False)
+
+        is_base_dir_not_empty = lambda: os.path.exists(files.BASE_DIR) and (
+            os.path.getsize(files.BASE_DIR) > 0
+            if os.path.isfile(files.BASE_DIR)
+            else (
+                bool(os.listdir(files.BASE_DIR))
+                if os.path.isdir(files.BASE_DIR)
+                else False
+            )
+        )
 
         tool_retriever = None
 
-        if (is_base_dir_not_empty() == True & self.retrieve == True):     
-            tool_retriever = basic_retrieve(tools,self.required_exts)
-            tools = [] #Cannot specify both tools and tool_retriever
+        if is_base_dir_not_empty() == True & self.retrieve == True:
+            tool_retriever = basic_retrieve(tools, self.required_exts)
+            tools = []  # Cannot specify both tools and tool_retriever
 
         model = self.config.get("model", "model", "gpt-3.5-turbo")
         if "gpt" in model:

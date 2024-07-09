@@ -3,7 +3,7 @@ from llama_index.core.agent import FunctionCallingAgentWorker
 
 
 class LLMs:
-    def __init__(self, tools,instruction,tool_retriever=None):
+    def __init__(self, tools, instruction, tool_retriever=None):
         self.tools = tools
         self.tool_retriever = tool_retriever
         self.instruction = instruction
