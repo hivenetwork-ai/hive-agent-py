@@ -55,8 +55,11 @@ async def setup_chats_table(db: AsyncSession):
         "message": "String",
         "role": "String",
         "timestamp": "String",
-        # TODO: add agent_id
     }
+
+    if "HIVE_AGENT_ID" in os.environ:
+        columns["agent_id"] = os.getenv("HIVE_AGENT_ID")
+
     await db_manager.create_table("chats", columns)
     logger.info("Table 'chats' created successfully.")
 
