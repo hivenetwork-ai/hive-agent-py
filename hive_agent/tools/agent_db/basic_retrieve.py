@@ -1,5 +1,6 @@
 from llama_index.core import VectorStoreIndex, SimpleDirectoryReader
 from llama_index.core.objects import ObjectIndex
+from hive_agent.server.routes import files
 
 from dotenv import load_dotenv
 
@@ -8,7 +9,7 @@ load_dotenv()
 
 def basic_retrieve(tools: list, required_exts: list):
 
-    retreive_data_path = "./hive-agent-data/files/user/"
+    retreive_data_path = files.BASE_DIR
 
     reader = SimpleDirectoryReader(
         input_dir=retreive_data_path,
