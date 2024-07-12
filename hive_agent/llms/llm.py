@@ -1,8 +1,9 @@
-from llama_index.core.settings import Settings
-from llama_index.core.agent import FunctionCallingAgentWorker
+from llama_index.core.agent import AgentRunner
 
 
-class LLMs:
+class LLM:
+    agent: AgentRunner
+
     def __init__(self, tools, instruction, tool_retriever=None):
         self.tools = tools
         self.tool_retriever = tool_retriever
