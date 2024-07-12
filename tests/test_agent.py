@@ -16,7 +16,12 @@ def agent():
         "hive_agent.agent.setup_routes"
     ), patch(
         "uvicorn.Server.serve", new_callable=MagicMock
+    ), patch(
+        "llama_index.core.VectorStoreIndex.from_documents"
+    ), patch(
+        "llama_index.core.objects.ObjectIndex.from_objects"
     ):
+
         test_agent = HiveAgent(
             name="TestAgent",
             functions=[lambda x: x],
@@ -25,18 +30,23 @@ def agent():
             port=8000,
             instruction="Test instruction",
             role="leader",
+            retrieve=True,
+            required_exts=[".txt"],
         )
     return test_agent
 
 
 @pytest.mark.asyncio
 async def test_agent_initialization(agent):
+    
     assert agent.name == "TestAgent"
     assert agent.config_path == "./hive_config_test.toml"
     assert agent.host == "0.0.0.0"
     assert agent.port == 8000
     assert agent.instruction == "Test instruction"
     assert agent.__role__ == "leader"
+    assert agent.retrieve == True
+    assert agent.required_exts == [".txt"]
 
 
 def test_server_setup(agent):

@@ -3,6 +3,7 @@ import logging
 import signal
 import sys
 import uvicorn
+import os
 
 from typing import Callable, List, Any
 
@@ -21,8 +22,8 @@ from llama_index.core.llms import ChatMessage
 from llama_index.core.tools import FunctionTool
 
 from hive_agent.llm_settings import init_llm_settings
-from hive_agent.server.routes import setup_routes
-from hive_agent.tools.agent_db import get_db_schemas, text_2_sql
+from hive_agent.server.routes import setup_routes, files
+from hive_agent.tools.agent_db import get_db_schemas, text_2_sql, basic_retrieve
 
 from dotenv import load_dotenv
 from hive_agent.config import Config
@@ -44,6 +45,8 @@ class HiveAgent:
         port=8000,
         instruction="",
         role="",
+        retrieve=False,
+        required_exts=[".md", '.mdx' ,".txt", '.csv', '.docx', '.pdf'],
     ):
         self.name = name
         self.functions = functions
@@ -55,9 +58,9 @@ class HiveAgent:
         self.instruction = instruction
         self.__role__ = role
         self.optional_dependencies = {}
-
         self.config = Config(config_path=config_path)
-
+        self.retrieve = retrieve
+        self.required_exts = required_exts
         logging.basicConfig(stream=sys.stdout, level=self.config.get_log_level())
         logging.getLogger().addHandler(logging.StreamHandler(stream=sys.stdout))
 
@@ -84,17 +87,33 @@ class HiveAgent:
 
         tools = custom_tools + system_tools
 
+        is_base_dir_not_empty = lambda: os.path.exists(files.BASE_DIR) and (
+            os.path.getsize(files.BASE_DIR) > 0
+            if os.path.isfile(files.BASE_DIR)
+            else (
+                bool(os.listdir(files.BASE_DIR))
+                if os.path.isdir(files.BASE_DIR)
+                else False
+            )
+        )
+
+        tool_retriever = None
+
+        if is_base_dir_not_empty() == True & self.retrieve == True:
+            tool_retriever = basic_retrieve(tools, self.required_exts)
+            tools = []  # Cannot specify both tools and tool_retriever
+
         model = self.config.get("model", "model", "gpt-3.5-turbo")
         if "gpt" in model:
-            self.__agent = OpenAILLM(tools, self.instruction).agent
+            self.__agent = OpenAILLM(tools, self.instruction, tool_retriever).agent
         elif "claude" in model:
-            self.__agent = ClaudeLLM(tools, self.instruction).agent
+            self.__agent = ClaudeLLM(tools, self.instruction, tool_retriever).agent
         elif "llama" in model:
-            self.__agent = OllamaLLM(tools, self.instruction).agent
+            self.__agent = OllamaLLM(tools, self.instruction, tool_retriever).agent
         elif "mixtral" or "mistral" in model:
-            self.__agent = MistralLLM(tools, self.instruction).agent
+            self.__agent = MistralLLM(tools, self.instruction, tool_retriever).agent
         else:
-            self.__agent = OpenAILLM(tools, self.instruction).agent
+            self.__agent = OpenAILLM(tools, self.instruction, tool_retriever).agent
 
         if self.optional_dependencies.get("web3"):
             from hive_agent.wallet import WalletStore
