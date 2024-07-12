@@ -46,7 +46,7 @@ class HiveAgent:
         instruction="",
         role="",
         retrieve=False,
-        required_exts=[".md"],
+        required_exts=[".md", '.mdx' ,".txt", '.csv', '.docx', '.pdf'],
     ):
         self.name = name
         self.functions = functions
