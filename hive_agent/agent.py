@@ -1,50 +1,54 @@
 import asyncio
 import logging
+import os
 import signal
 import sys
 import uvicorn
 
-from typing import Callable, List, Any
+from typing import Callable, List, Optional
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from llama_index.agent.openai import OpenAIAgent
-from llama_index.core.agent import FunctionCallingAgentWorker
-
-from hive_agent.llms import OpenAILLM
-from hive_agent.llms import ClaudeLLM
-from hive_agent.llms import MistralLLM
-from hive_agent.llms import OllamaLLM
-
-from llama_index.core.llms import ChatMessage
+from llama_index.core.agent import AgentRunner
+from llama_index.core.llms import ChatMessage, MessageRole
 from llama_index.core.tools import FunctionTool
 
-from hive_agent.llm_settings import init_llm_settings
+from hive_agent.chat import ChatManager
+from hive_agent.config import Config
+from hive_agent.database.database import DatabaseManager, get_db
+from hive_agent.llms import LLM, OpenAILLM, ClaudeLLM, MistralLLM, OllamaLLM
+from hive_agent.llms.utils import init_llm_settings
 from hive_agent.server.routes import setup_routes
 from hive_agent.tools.agent_db import get_db_schemas, text_2_sql
 
 from dotenv import load_dotenv
-from hive_agent.config import Config
 
 load_dotenv()
 
 
 class HiveAgent:
+    id: str
     name: str
     wallet_store: "WalletStore"  # this attribute will be conditionally initialized
-    __agent: Any
+    __llm: LLM
+    __agent: AgentRunner
 
     def __init__(
-        self,
-        name: str,
-        functions: List[Callable],
-        config_path="../../hive_config_example.toml",
-        host="0.0.0.0",
-        port=8000,
-        instruction="",
-        role="",
+            self,
+            name: str,
+            functions: List[Callable],
+            llm: Optional[LLM] = None,
+            instruction="",
+            role="",
+            description="",
+            agent_id=os.getenv("HIVE_AGENT_ID", ""),
+            config_path="../../hive_config_example.toml",
+            host="0.0.0.0",
+            port=8000,
     ):
+        self.__llm = llm
+        self.id = agent_id
         self.name = name
         self.functions = functions
         self.config_path = config_path
@@ -53,7 +57,8 @@ class HiveAgent:
         self.app = FastAPI()
         self.shutdown_event = asyncio.Event()
         self.instruction = instruction
-        self.__role__ = role
+        self.role = role
+        self.description = description
         self.optional_dependencies = {}
 
         self.config = Config(config_path=config_path)
@@ -84,17 +89,21 @@ class HiveAgent:
 
         tools = custom_tools + system_tools
 
-        model = self.config.get("model", "model", "gpt-3.5-turbo")
-        if "gpt" in model:
-            self.__agent = OpenAILLM(tools, self.instruction).agent
-        elif "claude" in model:
-            self.__agent = ClaudeLLM(tools, self.instruction).agent
-        elif "llama" in model:
-            self.__agent = OllamaLLM(tools, self.instruction).agent
-        elif "mixtral" or "mistral" in model:
-            self.__agent = MistralLLM(tools, self.instruction).agent
+        if self.__llm is not None:
+            print(f"using provided llm: {type(self.__llm)}")
+            self.__agent = self.__llm.agent
         else:
-            self.__agent = OpenAILLM(tools, self.instruction).agent
+            model = self.config.get("model", "model", "gpt-3.5-turbo")
+            if "gpt" in model:
+                self.__agent = OpenAILLM(tools, self.instruction).agent
+            elif "claude" in model:
+                self.__agent = ClaudeLLM(tools, self.instruction).agent
+            elif "llama" in model:
+                self.__agent = OllamaLLM(tools, self.instruction).agent
+            elif "mixtral" or "mistral" or "codestral" in model:
+                self.__agent = MistralLLM(tools, self.instruction).agent
+            else:
+                self.__agent = OpenAILLM(tools, self.instruction).agent
 
         if self.optional_dependencies.get("web3"):
             from hive_agent.wallet import WalletStore
@@ -106,8 +115,6 @@ class HiveAgent:
             self.logger.warning(
                 "'web3' extras not installed. Web3-related functionality will not be available."
             )
-
-        self.__setup_server()
 
     @staticmethod
     def _tools_from_funcs(funcs: List[Callable]) -> List[FunctionTool]:
@@ -141,6 +148,7 @@ class HiveAgent:
 
     async def run_server(self):
         try:
+            self.__setup_server()
             config = uvicorn.Config(
                 app=self.app, host=self.host, port=self.port, loop="asyncio"
             )
@@ -161,6 +169,24 @@ class HiveAgent:
             logging.error(
                 f"An error occurred in the main event loop: {e}", exc_info=True
             )
+
+    async def chat(
+            self,
+            prompt: str,
+            user_id="default_user",
+            session_id="default_chat",
+            role: Optional[str] = None,
+    ):
+        chat_manager = ChatManager(self.__agent, user_id=user_id, session_id=session_id)
+        db_manager = DatabaseManager(db=get_db())
+        sender_role = MessageRole.USER
+
+        if role.lower() == "agent":
+            sender_role = MessageRole.ASSISTANT
+
+        last_message = ChatMessage(role=sender_role, content=prompt)
+        response = await chat_manager.generate_response(db_manager, [], last_message)
+        return response
 
     def chat_history(self) -> List[ChatMessage]:
         return self.__agent.chat_history

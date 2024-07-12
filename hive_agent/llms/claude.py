@@ -1,11 +1,11 @@
 from llama_index.core.settings import Settings
 from llama_index.core.agent import FunctionCallingAgentWorker
 
-from hive_agent.llms.llms import LLMs
+from hive_agent.llms.llm import LLM
 
 
-class ClaudeLLM(LLMs):
-    def __init__(self, tools, instruction):
+class ClaudeLLM(LLM):
+    def __init__(self, tools=[], instruction=""):
         super().__init__(tools, instruction)
         self.agent = FunctionCallingAgentWorker.from_tools(
             tools,

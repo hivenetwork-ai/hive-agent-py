@@ -1,9 +1,10 @@
-from llama_index.core.settings import Settings
-from llama_index.core.agent import FunctionCallingAgentWorker
+from llama_index.core.agent import AgentRunner
 
 
-class LLMs:
-    def __init__(self, tools, instruction):
+class LLM:
+    agent: AgentRunner
+
+    def __init__(self, tools=[], instruction=""):
         self.tools = tools
         self.instruction = instruction
         self.system_prompt = f"""You are a domain-specific assistant that is helpful, respectful and honest. Always 
