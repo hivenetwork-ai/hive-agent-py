@@ -49,18 +49,14 @@ def setup_chat_routes(router: APIRouter, llm_instance):
             ChatMessage(role=m.role, content=m.content) for m in chat_data.messages
         ]
 
-        response = await chat_manager.generate_response(
-            db_manager, messages, last_chat_message
-        )
+        async def event_generator():
+            async for token in response.async_response_gen():
+                if await request.is_disconnected():
+                    break
+                yield token
 
         if isinstance(chat_manager.llm, OpenAIAgent):
-
-            async def event_generator():
-                for token in response:
-                    if await request.is_disconnected():
-                        break
-                    yield token
-
+            response = await chat_manager.llm.astream_chat(last_message.content, messages)
             return StreamingResponse(event_generator(), media_type="text/plain")
         else:
             return response
