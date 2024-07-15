@@ -59,6 +59,9 @@ def setup_chat_routes(router: APIRouter, llm_instance):
             response = await chat_manager.llm.astream_chat(last_message.content, messages)
             return StreamingResponse(event_generator(), media_type="text/plain")
         else:
+            response = await chat_manager.generate_response(
+                db_manager, messages, last_chat_message
+            )
             return response
 
     @router.get("/chat_history", response_model=List[ChatHistorySchema])
