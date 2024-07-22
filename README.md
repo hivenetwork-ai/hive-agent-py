@@ -223,5 +223,8 @@ $ pytest -s
 Open [http://localhost:8000/docs](http://localhost:8000/docs) with your browser to see the Swagger UI of the API.
 
 ## Learn More
+Join our Discord community for support and discussion.
+
+[![](https://dcbadge.limes.pink/api/server/vnJvW4wZp9)](https://discord.gg/vnJvW4wZp9)
 
 https://hivenetwork.ai
