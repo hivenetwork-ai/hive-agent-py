@@ -12,5 +12,5 @@ python-multipart==0.0.9
 llama-index-llms-anthropic==0.1.11
 llama-index-llms-mistralai==0.1.12
 llama-index-llms-ollama==0.1.5
-llama-index-llms-openai==0.1.21
+llama-index-llms-openai==0.1.27
 langtrace-python-sdk

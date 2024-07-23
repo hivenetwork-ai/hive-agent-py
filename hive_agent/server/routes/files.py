@@ -10,7 +10,17 @@ logger = logging.getLogger(__name__)
 
 
 BASE_DIR = "hive-agent-data/files/user"
-ALLOWED_FILE_TYPES = ["application/json", "text/csv", "text/plain", "application/pdf"]
+ALLOWED_FILE_TYPES = [
+    "application/json", 
+    "text/csv", 
+    "text/plain", 
+    "application/pdf",
+    "image/jpeg",
+    "image/jpg",            
+    "image/png",               
+    "application/msword",      
+    "application/vnd.ms-excel" 
+]
 
 file_store = FileStore(BASE_DIR)
 
