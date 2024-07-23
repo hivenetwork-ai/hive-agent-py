@@ -4,6 +4,10 @@
 
 This library provides you with an easy way to create and run Hive Agents.
 
+Join our Discord community for support and discussion.
+
+[![](https://dcbadge.limes.pink/api/server/vnJvW4wZp9)](https://discord.gg/vnJvW4wZp9)
+
 ## Project Requirements
 - Python >= 3.11
 
@@ -223,8 +227,5 @@ $ pytest -s
 Open [http://localhost:8000/docs](http://localhost:8000/docs) with your browser to see the Swagger UI of the API.
 
 ## Learn More
-Join our Discord community for support and discussion.
-
-[![](https://dcbadge.limes.pink/api/server/vnJvW4wZp9)](https://discord.gg/vnJvW4wZp9)
 
 https://hivenetwork.ai
