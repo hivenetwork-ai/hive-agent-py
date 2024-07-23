@@ -33,17 +33,6 @@ async def client(app):
     async with AsyncClient(app=app, base_url="http://test") as test_client:
         yield test_client
 
-
-@pytest.mark.asyncio
-async def test_create_upload_files(client):
-    files = [
-        ("files", ("test.txt", BytesIO(b"test content"), "text/plain")),
-    ]
-    response = await client.post("/uploadfiles/", files=files)
-    assert response.status_code == 200
-    assert response.json() == {"filenames": ["test.txt"]}
-
-
 @pytest.mark.asyncio
 async def test_list_files(client):
     files = [
@@ -91,3 +80,64 @@ async def test_rename_file(client):
 
     assert not os.path.exists(old_file_path), f"Old file still exists: {old_file_path}"
     # assert os.path.exists(new_file_path), f"New file does not exist: {new_file_path}"
+
+
+# Tests for allowed file types
+@pytest.mark.asyncio
+async def test_create_upload_files(client):
+    files = [
+        ("files", ("test.txt", BytesIO(b"test content"), "text/plain")),
+    ]
+    response = await client.post("/uploadfiles/", files=files)
+    assert response.status_code == 200
+    assert response.json() == {"filenames": ["test.txt"]}
+
+
+@pytest.mark.asyncio
+async def test_upload_image_jpeg(client):
+    files = [
+        ("files", ("test.jpeg", BytesIO(b"JPEG content"), "image/jpeg")),
+    ]
+    response = await client.post("/uploadfiles/", files=files)
+    assert response.status_code == 200
+    assert response.json() == {"filenames": ["test.jpeg"]}
+
+
+@pytest.mark.asyncio
+async def test_upload_image_png(client):
+    files = [
+        ("files", ("test.png", BytesIO(b"PNG content"), "image/png")),
+    ]
+    response = await client.post("/uploadfiles/", files=files)
+    assert response.status_code == 200
+    assert response.json() == {"filenames": ["test.png"]}
+
+
+@pytest.mark.asyncio
+async def test_upload_image_jpg(client):
+    files = [
+        ("files", ("test.jpg", BytesIO(b"JPG content"), "image/jpg")),
+    ]
+    response = await client.post("/uploadfiles/", files=files)
+    assert response.status_code == 200
+    assert response.json() == {"filenames": ["test.jpg"]}
+
+
+@pytest.mark.asyncio
+async def test_upload_application_msword(client):
+    files = [
+        ("files", ("test.doc", BytesIO(b"MS Word content"), "application/msword")),
+    ]
+    response = await client.post("/uploadfiles/", files=files)
+    assert response.status_code == 200
+    assert response.json() == {"filenames": ["test.doc"]}
+
+
+@pytest.mark.asyncio
+async def test_upload_application_vnd_ms_excel(client):
+    files = [
+        ("files", ("test.xls", BytesIO(b"MS Excel content"), "application/vnd.ms-excel")),
+    ]
+    response = await client.post("/uploadfiles/", files=files)
+    assert response.status_code == 200
+    assert response.json() == {"filenames": ["test.xls"]}
