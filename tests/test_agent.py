@@ -4,11 +4,11 @@ import pytest
 from unittest.mock import MagicMock, patch
 
 from hive_agent.agent import HiveAgent
-
+from hive_agent.tools.retriever.base_retrieve import IndexStore
 
 @pytest.fixture
 def agent():
-    with patch("hive_agent.agent.OpenAILLM"), patch(
+    with patch.object(IndexStore, 'get_instance', return_value=IndexStore()),patch("hive_agent.agent.OpenAILLM"), patch(
         "hive_agent.agent.ClaudeLLM"
     ), patch("hive_agent.agent.MistralLLM"), patch("hive_agent.agent.OllamaLLM"), patch(
         "hive_agent.wallet.WalletStore"
@@ -32,6 +32,7 @@ def agent():
             role="leader",
             retrieve=True,
             required_exts=[".txt"],
+            retrieval_tool="basic",
         )
     return test_agent
 
@@ -47,6 +48,7 @@ async def test_agent_initialization(agent):
     assert agent.__role__ == "leader"
     assert agent.retrieve == True
     assert agent.required_exts == [".txt"]
+    assert agent.retrieval_tool == "basic"
 
 
 def test_server_setup(agent):
