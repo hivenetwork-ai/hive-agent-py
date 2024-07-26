@@ -23,7 +23,17 @@ from llama_index.core.tools import FunctionTool
 
 from hive_agent.llm_settings import init_llm_settings
 from hive_agent.server.routes import setup_routes, files
-from hive_agent.tools.agent_db import get_db_schemas, text_2_sql, basic_retrieve
+from hive_agent.tools.agent_db import get_db_schemas, text_2_sql
+
+from hive_agent.tools.retriever.base_retrieve import (
+    RetrieverBase,
+    IndexStore,
+    supported_exts,
+)
+
+from hive_agent.tools.retriever.chroma_retrieve import ChromaRetriever
+from hive_agent.tools.retriever.pinecone_retrieve import PineconeRetriever
+from llama_index.core.objects import ObjectIndex
 
 from dotenv import load_dotenv
 from hive_agent.config import Config
@@ -46,7 +56,8 @@ class HiveAgent:
         instruction="",
         role="",
         retrieve=False,
-        required_exts=[".md", '.mdx' ,".txt", '.csv', '.docx', '.pdf'],
+        required_exts=supported_exts,
+        retrieval_tool="basic",
     ):
         self.name = name
         self.functions = functions
@@ -61,6 +72,7 @@ class HiveAgent:
         self.config = Config(config_path=config_path)
         self.retrieve = retrieve
         self.required_exts = required_exts
+        self.retrieval_tool = retrieval_tool
         logging.basicConfig(stream=sys.stdout, level=self.config.get_log_level())
         logging.getLogger().addHandler(logging.StreamHandler(stream=sys.stdout))
 
@@ -97,10 +109,35 @@ class HiveAgent:
             )
         )
 
+        index_store = IndexStore.get_instance()
         tool_retriever = None
 
         if is_base_dir_not_empty() == True & self.retrieve == True:
-            tool_retriever = basic_retrieve(tools, self.required_exts)
+            if "basic" in self.retrieval_tool:
+                retriever = RetrieverBase()
+                index = retriever.create_basic_index()
+                index_store.add_index(retriever.name, index)
+
+            if "chroma" in self.retrieval_tool:
+                chroma_retriever = ChromaRetriever()
+                index = chroma_retriever.create_index()
+                index_store.add_index(chroma_retriever.name, index)
+
+            if "pinecone-serverless" in self.retrieval_tool:
+                pinecone_retriever = PineconeRetriever()
+                index = pinecone_retriever.create_serverless_index()
+                index_store.add_index(pinecone_retriever.name, index)
+
+            if "pinecone-pod" in self.retrieval_tool:
+                pinecone_retriever = PineconeRetriever()
+                index = pinecone_retriever.create_pod_index()
+                index_store.add_index(pinecone_retriever.name, index)
+
+            vectorstore_object = ObjectIndex.from_objects(
+                tools,
+                index=index_store.get_all_indexes(),
+            )
+            tool_retriever = vectorstore_object.as_retriever(similarity_top_k=3)
             tools = []  # Cannot specify both tools and tool_retriever
 
         model = self.config.get("model", "model", "gpt-3.5-turbo")
