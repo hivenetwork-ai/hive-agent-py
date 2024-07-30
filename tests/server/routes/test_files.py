@@ -33,6 +33,7 @@ def app(file_store):
 @pytest.fixture
 async def client(app):
     with patch('hive_agent.tools.retriever.base_retrieve.RetrieverBase.create_basic_index'
+    ), patch('hive_agent.tools.retriever.base_retrieve.RetrieverBase.insert_documents'
     ), patch.object(IndexStore, 'save_to_file', MagicMock()):
         async with AsyncClient(app=app, base_url="http://test") as test_client:
             yield test_client
