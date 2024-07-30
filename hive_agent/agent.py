@@ -29,6 +29,7 @@ from hive_agent.tools.retriever.base_retrieve import (
     RetrieverBase,
     IndexStore,
     supported_exts,
+    index_base_dir
 )
 
 from hive_agent.tools.retriever.chroma_retrieve import ChromaRetriever
@@ -58,6 +59,7 @@ class HiveAgent:
         retrieve=False,
         required_exts=supported_exts,
         retrieval_tool="basic",
+        load_index_file=False,
     ):
         self.name = name
         self.functions = functions
@@ -73,6 +75,7 @@ class HiveAgent:
         self.retrieve = retrieve
         self.required_exts = required_exts
         self.retrieval_tool = retrieval_tool
+        self.load_index_file = load_index_file
         logging.basicConfig(stream=sys.stdout, level=self.config.get_log_level())
         logging.getLogger().addHandler(logging.StreamHandler(stream=sys.stdout))
 
@@ -108,11 +111,25 @@ class HiveAgent:
                 else False
             )
         )
+    
+        is_index_dir_not_empty = lambda: os.path.exists(index_base_dir) and (
+            os.path.getsize(index_base_dir) > 0
+            if os.path.isfile(index_base_dir)
+            else (
+                bool(os.listdir(index_base_dir))
+                if os.path.isdir(index_base_dir)
+                else False
+            )
+        )
+        if is_index_dir_not_empty() == True and self.load_index_file == True:
+            index_store = IndexStore.load_from_file()
+        
+        else:
+            index_store = IndexStore.get_instance()
+        
+        tool_retriever = None 
 
-        index_store = IndexStore.get_instance()
-        tool_retriever = None
-
-        if is_base_dir_not_empty() == True & self.retrieve == True:
+        if is_base_dir_not_empty() == True and self.retrieve == True:
             if "basic" in self.retrieval_tool:
                 retriever = RetrieverBase()
                 index = retriever.create_basic_index()
@@ -133,6 +150,9 @@ class HiveAgent:
                 index = pinecone_retriever.create_pod_index()
                 index_store.add_index(pinecone_retriever.name, index)
 
+            index_store.save_to_file()
+
+        if self.load_index_file == True or self.retrieve == True:
             vectorstore_object = ObjectIndex.from_objects(
                 tools,
                 index=index_store.get_all_indexes(),
@@ -247,3 +267,32 @@ class HiveAgent:
             logging.error(f"error during cleanup: {e}", exc_info=True)
         finally:
             logging.info("cleanup process completed")
+
+    def recreate_agent(self):
+
+        custom_tools = self._tools_from_funcs(self.functions)
+
+        # TODO: pass db client to db tools directly
+        system_tools = self._tools_from_funcs([get_db_schemas, text_2_sql])
+
+        tools = custom_tools + system_tools
+
+        index_store = IndexStore.get_instance()
+
+        vectorstore_object = ObjectIndex.from_objects(
+                tools,
+                index=index_store.get_all_indexes(),
+            )
+        tool_retriever = vectorstore_object.as_retriever(similarity_top_k=3)
+        tools = []  # Cannot specify both tools and tool_retriever
+        model = self.config.get("model", "model", "gpt-3.5-turbo")
+        if "gpt" in model:
+            self.__agent = OpenAILLM(tools, self.instruction, tool_retriever).agent
+        elif "claude" in model:
+            self.__agent = ClaudeLLM(tools, self.instruction, tool_retriever).agent
+        elif "llama" in model:
+            self.__agent = OllamaLLM(tools, self.instruction, tool_retriever).agent
+        elif "mixtral" or "mistral" in model:
+            self.__agent = MistralLLM(tools, self.instruction, tool_retriever).agent
+        else:
+            self.__agent = OpenAILLM(tools, self.instruction, tool_retriever).agent

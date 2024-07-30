@@ -8,7 +8,7 @@ from hive_agent.tools.retriever.base_retrieve import RetrieverBase
 
 
 class ChromaRetriever(RetrieverBase):
-    def __init__(self, base_dir="hive-agent-data/chromadb"):
+    def __init__(self, base_dir="hive-agent-data/index/chromadb"):
         super().__init__(
             name="ChromaRetriever",
             description="This tool creates chroma retriever index",
