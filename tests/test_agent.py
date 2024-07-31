@@ -4,11 +4,11 @@ import pytest
 from unittest.mock import MagicMock, patch
 
 from hive_agent.agent import HiveAgent
-
+from hive_agent.tools.retriever.base_retrieve import IndexStore
 
 @pytest.fixture
 def agent():
-    with patch("hive_agent.agent.OpenAILLM"), patch(
+    with patch.object(IndexStore, 'get_instance', return_value=IndexStore()),patch("hive_agent.agent.OpenAILLM"), patch(
         "hive_agent.agent.ClaudeLLM"
     ), patch("hive_agent.agent.MistralLLM"), patch("hive_agent.agent.OllamaLLM"), patch(
         "hive_agent.wallet.WalletStore"
@@ -20,7 +20,7 @@ def agent():
         "llama_index.core.VectorStoreIndex.from_documents"
     ), patch(
         "llama_index.core.objects.ObjectIndex.from_objects"
-    ):
+    ), patch.object(IndexStore, 'save_to_file', MagicMock()):
 
         test_agent = HiveAgent(
             name="TestAgent",
@@ -32,21 +32,24 @@ def agent():
             role="leader",
             retrieve=True,
             required_exts=[".txt"],
+            retrieval_tool="basic",
+            load_index_file = False
         )
     return test_agent
 
 
 @pytest.mark.asyncio
 async def test_agent_initialization(agent):
-    
-    assert agent.name == "TestAgent"
-    assert agent.config_path == "./hive_config_test.toml"
-    assert agent.host == "0.0.0.0"
-    assert agent.port == 8000
-    assert agent.instruction == "Test instruction"
-    assert agent.__role__ == "leader"
-    assert agent.retrieve == True
-    assert agent.required_exts == [".txt"]
+        assert agent.name == "TestAgent"
+        assert agent.config_path == "./hive_config_test.toml"
+        assert agent.host == "0.0.0.0"
+        assert agent.port == 8000
+        assert agent.instruction == "Test instruction"
+        assert agent.__role__ == "leader"
+        assert agent.retrieve == True
+        assert agent.required_exts == [".txt"]
+        assert agent.retrieval_tool == "basic"
+        assert agent.load_index_file == False
 
 
 def test_server_setup(agent):

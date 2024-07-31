@@ -3,13 +3,14 @@ from typing import List
 import logging
 from hive_agent.filestore import FileStore
 
-
 # TODO: get log level from config
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-
 BASE_DIR = "hive-agent-data/files/user"
+
+from hive_agent.tools.retriever.base_retrieve import IndexStore, RetrieverBase
+
 ALLOWED_FILE_TYPES = [
     "application/json", 
     "text/csv", 
@@ -24,6 +25,7 @@ ALLOWED_FILE_TYPES = [
 
 file_store = FileStore(BASE_DIR)
 
+index_store = IndexStore.get_instance()
 
 def setup_files_routes(router: APIRouter):
     @router.post("/uploadfiles/")
@@ -48,6 +50,22 @@ def setup_files_routes(router: APIRouter):
             try:
                 filename = await file_store.save_file(file)
                 saved_files.append(filename)
+                
+                if 'BaseRetriever' in index_store.list_indexes():
+                    index = index_store.get_index('BaseRetriever')
+                    RetrieverBase().insert_documents(index, file_path=['{BASE_DIR}/{filename}'.format(BASE_DIR=BASE_DIR, filename=filename)])
+                    logger.info(f"Inserting data to existing basic index")
+                    logger.info(f"Index: {index_store.list_indexes()}")
+                    index_store.save_to_file()
+                    
+                else:
+                    retriever = RetrieverBase()
+                    index = retriever.create_basic_index(file_path=['{BASE_DIR}/{filename}'.format(BASE_DIR=BASE_DIR, filename=filename)])
+                    index_store.add_index(retriever.name, index)
+                    logger.info(f"Inserting data to new basic index")
+                    logger.info(f"Index: {index_store.list_indexes()}")
+                    index_store.save_to_file()
+
             except ValueError as e:
                 logger.error(f"Value error: {e}")
                 raise HTTPException(status_code=400, detail=str(e))

@@ -10,7 +10,7 @@ from hive_agent.llms import ClaudeLLM
 from hive_agent.llms import MistralLLM
 from hive_agent.llms import OllamaLLM
 
-from hive_agent.tools.agent_db.basic_retrieve import basic_retrieve
+from llama_index.core.objects import ObjectIndex
 
 @pytest.fixture
 def tools():
@@ -31,8 +31,15 @@ def required_exts():
 
 @pytest.fixture
 def tool_retriever(tools):
-    with patch("hive_agent.tools.agent_db.basic_retrieve.basic_retrieve") as mock_basic_retrieve:
-        return mock_basic_retrieve
+    with patch("llama_index.core.VectorStoreIndex.from_documents"
+    ), patch("llama_index.core.objects.ObjectIndex.from_objects"
+    ), patch("hive_agent.tools.retriever.base_retrieve.RetrieverBase.create_basic_index") as mock_create_basic_index:
+        vectorstore_object = ObjectIndex.from_objects(
+                tools,
+                index=mock_create_basic_index,
+            )
+        tool_retriever = vectorstore_object.as_retriever(similarity_top_k=3)
+        return tool_retriever
     
             
 def test_openai_llm_initialization(tools, instruction):

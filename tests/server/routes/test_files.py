@@ -1,6 +1,7 @@
 import os
 import pytest
 import shutil
+from unittest.mock import MagicMock,patch
 
 from fastapi import FastAPI, APIRouter
 from httpx import AsyncClient
@@ -8,6 +9,7 @@ from io import BytesIO
 
 from hive_agent.filestore import FileStore
 from hive_agent.server.routes.files import setup_files_routes
+from hive_agent.tools.retriever.base_retrieve import IndexStore
 
 BASE_DIR = "test_files"
 
@@ -30,8 +32,11 @@ def app(file_store):
 
 @pytest.fixture
 async def client(app):
-    async with AsyncClient(app=app, base_url="http://test") as test_client:
-        yield test_client
+    with patch('hive_agent.tools.retriever.base_retrieve.RetrieverBase.create_basic_index'
+    ), patch('hive_agent.tools.retriever.base_retrieve.RetrieverBase.insert_documents'
+    ), patch.object(IndexStore, 'save_to_file', MagicMock()):
+        async with AsyncClient(app=app, base_url="http://test") as test_client:
+            yield test_client
 
 @pytest.mark.asyncio
 async def test_list_files(client):

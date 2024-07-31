@@ -293,3 +293,127 @@ This endpoint deletes a specified file from the server.
 curl --request DELETE \
   --url http://localhost:8000/api/v1/files/test_delete.txt
 ```
+
+## Index Endpoints
+
+### **POST /api/v1/create_index/?{index_name}&{index_type}'**
+
+This endpoint create an index 
+
+**URL Parameters:**
+
+- index_name: The name of the index.
+- index_type: You can choose one of them 'basic', 'chroma', 'pinecone-serverless', 'pinecone-pod' 
+
+
+**Request Body:**
+
+```json
+[
+  "hive-agent-data/files/user/{yourfilename1}", "hive-agent-data/files/user/{yourfilename2}",
+]
+```
+
+**Response:**
+- A JSON object indicating the success of the index creation.
+
+**Usage Example:**
+```bash
+curl -X 'POST' \
+  'http://0.0.0.0:8000/api/v1/create_index/?index_name=test&index_type=chroma' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -d '[
+  "hive-agent-data/files/user/pdf-sample.pdf"
+]'
+```
+
+### **POST /api/v1/insert_documents/?{index_name}**
+
+This endpoint inserts documents into an existing index.
+
+**URL Parameters:**
+
+- index_name: The name of the index to insert documents into.
+
+**Request Body:**
+
+```json
+[
+  "hive-agent-data/files/user/{yourfilename1}", "hive-agent-data/files/user/{yourfilename2}",
+]
+```
+
+**Response:**
+- A JSON object indicating the success of the document insertion.
+
+**Usage Example:**
+```bash
+curl -X 'POST' \
+  'http://0.0.0.0:8000/api/v1/insert_documents/?index_name=test' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -d '[
+  "hive-agent-data/files/user/uniswap-protocol.md"
+]'
+```
+
+### **PUT /api/v1/update_documents/?{index_name}**
+
+This endpoint updates documents in an existing index.
+
+**URL Parameters:**
+
+- index_name: The name of the index to update documents in.
+
+**Request Body:**
+
+```json
+[
+  "hive-agent-data/files/user/{yourfilename1}", "hive-agent-data/files/user/{yourfilename2}",
+]
+```
+
+**Response:**
+- A JSON object indicating the success of the document update.
+
+**Usage Example:**
+```bash
+curl -X 'PUT' \
+  'http://0.0.0.0:8000/api/v1/update_documents/?index_name=test' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -d '[
+  "hive-agent-data/files/user/uniswap-protocol.md"
+]'
+```
+
+
+### **DELETE /api/v1/delete_documents/?{index_name}**
+
+This endpoint deletes documents from an existing index.
+
+**URL Parameters:**
+
+- index_name: The name of the index to delete documents from.
+
+**Request Body:**
+```json
+[
+  "hive-agent-data/files/user/{yourfilename1}", "hive-agent-data/files/user/{yourfilename2}",
+]
+```
+
+**Response:**
+- A JSON object indicating the success of the document deletion.
+
+**Usage Example:**
+```bash
+curl -X 'DELETE' \
+  'http://0.0.0.0:8000/api/v1/delete_documents/?index_name=test' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -d '[
+  "hive-agent-data/files/user/pdf-sample.pdf"
+]'
+```

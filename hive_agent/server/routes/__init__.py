@@ -8,6 +8,7 @@ from fastapi import FastAPI, APIRouter
 from .chat import setup_chat_routes
 from .database import setup_database_routes
 from .files import setup_files_routes
+from .vectorindex import setup_vectorindex_routes
 
 from hive_agent.database.database import initialize_db, get_db, setup_chats_table
 
@@ -34,5 +35,6 @@ def setup_routes(app: FastAPI, agent: Any):
     setup_database_routes(v1)
     setup_chat_routes(v1, agent)
     setup_files_routes(v1)
+    setup_vectorindex_routes(v1)
 
     app.include_router(v1, prefix="/api/v1")

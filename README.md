@@ -170,6 +170,48 @@ if __name__ == "__main__":
     The address that initiated the transaction with hash 0x5c504ed432cb51138bcf09aa5e8a410dd4a1e204ef84bfed1be16dfba1b22060 is 0xA1E4380A3B1f749673E270229993eE55F35663b4.
     """
 ```
+### Adding Retriever
+You can add retriever tools to create vector embeddings and retrieve semantic information. It will create vector index for every pdf documents under 'hive-agent-data/files/user' folder and can filter files with required_exts parameter. 
+
+- Hive agent supports ".md", '.mdx' ,".txt", '.csv', '.docx', '.pdf' file types. 
+- Hive agent supports 4 type of retriever (basic, chroma, pinecone-serverless, pinecone-pod) and controlled with retrieval_tool parameter.  
+
+```python
+import os
+from typing import Optional, Dict
+from web3 import Web3
+from hive_agent import HiveAgent
+from dotenv import load_dotenv
+
+load_dotenv()
+
+if __name__ == "__main__":
+    my_agent = HiveAgent(
+        name="retrieve-test",
+        functions=[],
+        retrieve = True,
+        required_exts = ['.md'],
+        retrieval_tool='chroma'
+    )
+    
+    my_agent.run()
+
+    """
+    [1] send a request:
+    
+    ```
+    curl --location 'localhost:8000/api/v1/chat' \
+    --header 'Content-Type: application/json' \
+    --data '{
+        "user_id": "user123",
+        "session_id": "session123",
+        "chat_data": {
+            "messages": [
+                { "role": "user", "content": "Which endpoints should I call to create vector index?" }
+            ]
+        }
+    }'
+```
 
 ### Tutorial
 The complete tutorial can be found at [./tutorial.md](./tutorial.md).
