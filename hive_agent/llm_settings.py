@@ -20,6 +20,8 @@ from hive_agent.config import Config
 
 def init_llm_settings(config):
     model = config.get("model", "model", "gpt-3.5-turbo")
+    ollama_server_url = config.get("model", "ollama_server_url", "http://localhost:11434")
+
     if "gpt" in model:
         Settings.llm = OpenAI(
             model=model, request_timeout=config.get("timeout", "llm", 30)
@@ -30,7 +32,9 @@ def init_llm_settings(config):
         logging.info(f"Claude model selected")
     elif "llama" in model:
         Settings.llm = Ollama(
-            model="llama3", request_timeout=config.get("timeout", "llm", 30)
+            base_url=ollama_server_url,
+            model="llama3",
+            request_timeout=config.get("timeout", "llm", 30)
         )
         logging.info(f"Ollama model selected")
     elif "mixtral" or "mistral" in model:
