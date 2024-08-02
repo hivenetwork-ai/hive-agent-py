@@ -18,6 +18,7 @@ setup(
         "langtrace-python-sdk",
         "llama-index-vector-stores-chroma==0.1.10",
         "llama-index-vector-stores-pinecone==0.1.8",
+        "llama-index-multi-modal-llms-openai==0.1.8",
     ],
     extras_require={
         "web3": ["web3==6.15.1", "py-solc-x==2.0.2", "eth-account==0.11.0"],
