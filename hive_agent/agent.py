@@ -1,9 +1,9 @@
 import asyncio
 import logging
+import os
 import signal
 import sys
 import uvicorn
-import os
 
 from typing import Callable, List, Any, Optional
 
@@ -12,15 +12,16 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from llama_index.core.agent import AgentRunner
 from llama_index.core.llms import ChatMessage, MessageRole
-from llama_index.core.tools import FunctionTool
+from llama_index.core.settings import Settings
 
 from hive_agent.chat import ChatManager
 from hive_agent.config import Config
 from hive_agent.database.database import DatabaseManager, get_db
 from hive_agent.llms import LLM, OpenAILLM, ClaudeLLM, MistralLLM, OllamaLLM
-from hive_agent.llms.utils import init_llm_settings
+from hive_agent.llms.utils import init_llm_settings, get_llm, llm_from_wrapper
 from hive_agent.server.routes import setup_routes, files
 from hive_agent.tools.agent_db import get_db_schemas, text_2_sql
+from hive_agent.utils import tools_from_funcs
 
 from hive_agent.tools.retriever.base_retrieve import (
     RetrieverBase,
@@ -66,25 +67,24 @@ class HiveAgent:
         self.id = agent_id
         self.name = name
         self.functions = functions
-        self.config_path = config_path
-        self.host = host
-        self.port = port
-        self.app = FastAPI()
+        self.__host = host
+        self.__port = port
+        self.__app = FastAPI()
         self.shutdown_event = asyncio.Event()
         self.instruction = instruction
         self.role = role
         self.description = description
-        self.optional_dependencies = {}
-        self.config = Config(config_path=config_path)
+        self.__optional_dependencies = {}
+        self.__config = Config(config_path=config_path)
         self.retrieve = retrieve
         self.required_exts = required_exts
         self.retrieval_tool = retrieval_tool
         self.load_index_file = load_index_file
-        logging.basicConfig(stream=sys.stdout, level=self.config.get_log_level())
+        logging.basicConfig(stream=sys.stdout, level=self.__config.get_log_level())
         logging.getLogger().addHandler(logging.StreamHandler(stream=sys.stdout))
 
         self.logger = logging.getLogger()
-        self.logger.setLevel(self.config.get_log_level())
+        self.logger.setLevel(self.__config.get_log_level())
 
         self._check_optional_dependencies()
         self.__setup()
@@ -93,16 +93,17 @@ class HiveAgent:
         try:
             from web3 import Web3
 
-            self.optional_dependencies["web3"] = True
+            self.__optional_dependencies["web3"] = True
         except ImportError:
-            self.optional_dependencies["web3"] = False
+            self.__optional_dependencies["web3"] = False
 
     def __setup(self):
-        init_llm_settings(self.config)
-        custom_tools = self._tools_from_funcs(self.functions)
+        init_llm_settings(self.__config)
+        print(f"inside agent {self.name}, Settings.llm is {Settings.llm}")
+        custom_tools = tools_from_funcs(funcs=self.functions)
 
         # TODO: pass db client to db tools directly
-        system_tools = self._tools_from_funcs([get_db_schemas, text_2_sql])
+        system_tools = tools_from_funcs(funcs=[get_db_schemas, text_2_sql])
 
         tools = custom_tools + system_tools
 
@@ -166,9 +167,11 @@ class HiveAgent:
 
         if self.__llm is not None:
             print(f"using provided llm: {type(self.__llm)}")
-            self.__agent = self.__llm.agent
+            self.__agent = llm_from_wrapper(self.__llm)
         else:
-            model = self.config.get("model", "model", "gpt-3.5-turbo")
+            # self.__agent = get_llm(self.__config)
+
+            model = self.__config.get("model", "name", "gpt-3.5-turbo")
             if "gpt" in model:
                 self.__agent = OpenAILLM(tools, self.instruction).agent
             elif "claude" in model:
@@ -180,7 +183,7 @@ class HiveAgent:
             else:
                 self.__agent = OpenAILLM(tools, self.instruction).agent
 
-        if self.optional_dependencies.get("web3"):
+        if self.__optional_dependencies.get("web3"):
             from hive_agent.wallet import WalletStore
 
             self.wallet_store = WalletStore()
@@ -191,20 +194,16 @@ class HiveAgent:
                 "'web3' extras not installed. Web3-related functionality will not be available."
             )
 
-    @staticmethod
-    def _tools_from_funcs(funcs: List[Callable]) -> List[FunctionTool]:
-        return [FunctionTool.from_defaults(fn=func) for func in funcs]
-
     def __setup_server(self):
 
-        self.configure_cors()
-        setup_routes(self.app, self.__agent)
+        self.__configure_cors()
+        setup_routes(self.__app, self.__agent)
 
         signal.signal(signal.SIGINT, self.__signal_handler)
         signal.signal(signal.SIGTERM, self.__signal_handler)
 
-    def configure_cors(self):
-        environment = self.config.get(
+    def __configure_cors(self):
+        environment = self.__config.get(
             "environment", "type"
         )  # default to 'development' if not set
 
@@ -213,7 +212,7 @@ class HiveAgent:
             logger.warning(
                 "Running in development mode - allowing CORS for all origins"
             )
-            self.app.add_middleware(
+            self.__app.add_middleware(
                 CORSMiddleware,
                 allow_origins=["*"],
                 allow_credentials=True,
@@ -225,7 +224,7 @@ class HiveAgent:
         try:
             self.__setup_server()
             config = uvicorn.Config(
-                app=self.app, host=self.host, port=self.port, loop="asyncio"
+                app=self.__app, host=self.__host, port=self.__port, loop="asyncio"
             )
             server = uvicorn.Server(config)
             await server.serve()
@@ -246,11 +245,11 @@ class HiveAgent:
             )
 
     async def chat(
-            self,
-            prompt: str,
-            user_id="default_user",
-            session_id="default_chat",
-            role: Optional[str] = None,
+        self,
+        prompt: str,
+        user_id="default_user",
+        session_id="default_chat",
+        role: Optional[str] = None,
     ):
         chat_manager = ChatManager(self.__agent, user_id=user_id, session_id=session_id)
         db_manager = DatabaseManager(db=get_db())
@@ -266,9 +265,11 @@ class HiveAgent:
     def chat_history(self) -> List[ChatMessage]:
         return self.__agent.chat_history
 
-    @staticmethod
-    def _tools_from_funcs(funcs: List[Callable]) -> List[FunctionTool]:
-        return [FunctionTool.from_defaults(fn=func) for func in funcs]
+    def query(self, *args, **kwargs):
+        return self.__agent.query(*args, **kwargs)
+
+    def aquery(self, *args, **kwargs):
+        return self.__agent.aquery(*args, **kwargs)
 
     def __signal_handler(self, signum, frame):
         logging.info(f"signal {signum} received, initiating graceful shutdown...")

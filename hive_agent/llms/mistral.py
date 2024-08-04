@@ -7,6 +7,7 @@ from hive_agent.llms.llm import LLM
 class MistralLLM(LLM):
     def __init__(self, tools=[], instruction=""):
         super().__init__(tools, instruction)
+        print(f"inside {MistralLLM}: Settings.llm is {Settings.llm}")
         self.agent = FunctionCallingAgentWorker.from_tools(
             tools,
             system_prompt=self.system_prompt,
