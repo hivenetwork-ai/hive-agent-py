@@ -5,11 +5,12 @@ from hive_agent.llms.llm import LLM
 
 
 class ClaudeLLM(LLM):
-    def __init__(self, tools=[], instruction=""):
-        super().__init__(tools, instruction)
+    def __init__(self, tools=None, instruction="", tool_retriever=None):
+        super().__init__(tools, instruction, tool_retriever)
         self.agent = FunctionCallingAgentWorker.from_tools(
             tools,
             system_prompt=self.system_prompt,
             llm=Settings.llm,
             allow_parallel_tool_calls=False,
+            tool_retriever=tool_retriever,
         ).as_agent()

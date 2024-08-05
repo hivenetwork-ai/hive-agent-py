@@ -18,7 +18,7 @@ from hive_agent.chat import ChatManager
 from hive_agent.config import Config
 from hive_agent.database.database import DatabaseManager, get_db
 from hive_agent.llms import LLM, OpenAILLM, ClaudeLLM, MistralLLM, OllamaLLM
-from hive_agent.llms.utils import init_llm_settings, get_llm, llm_from_wrapper
+from hive_agent.llms.utils import init_llm_settings, llm_from_wrapper
 from hive_agent.server.routes import setup_routes, files
 from hive_agent.tools.agent_db import get_db_schemas, text_2_sql
 from hive_agent.utils import tools_from_funcs
@@ -167,21 +167,22 @@ class HiveAgent:
 
         if self.__llm is not None:
             print(f"using provided llm: {type(self.__llm)}")
-            self.__agent = llm_from_wrapper(self.__llm)
+            # self.__agent = llm_from_wrapper(self.__llm, self.__config)
+            self.__agent = self.__llm.agent
         else:
             # self.__agent = get_llm(self.__config)
 
             model = self.__config.get("model", "name", "gpt-3.5-turbo")
             if "gpt" in model:
-                self.__agent = OpenAILLM(tools, self.instruction).agent
+                self.__agent = OpenAILLM(tools, self.instruction, tool_retriever).agent
             elif "claude" in model:
-                self.__agent = ClaudeLLM(tools, self.instruction).agent
+                self.__agent = ClaudeLLM(tools, self.instruction, tool_retriever).agent
             elif "llama" in model:
-                self.__agent = OllamaLLM(tools, self.instruction).agent
+                self.__agent = OllamaLLM(tools, self.instruction, tool_retriever).agent
             elif "mixtral" or "mistral" or "codestral" in model:
-                self.__agent = MistralLLM(tools, self.instruction).agent
+                self.__agent = MistralLLM(tools, self.instruction, tool_retriever).agent
             else:
-                self.__agent = OpenAILLM(tools, self.instruction).agent
+                self.__agent = OpenAILLM(tools, self.instruction, tool_retriever).agent
 
         if self.__optional_dependencies.get("web3"):
             from hive_agent.wallet import WalletStore

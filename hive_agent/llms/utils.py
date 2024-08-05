@@ -29,14 +29,14 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-def create_llm(llm_type: str, config: Optional[Config]):
+def _create_llm(llm_type: str, config: Optional[Config]):
     timeout = (
         config.get("timeout", "llm", DEFAULT_LLM_TIMEOUT)
         if config
         else DEFAULT_LLM_TIMEOUT
     )
     ollama_server_url = config.get("model", "ollama_server_url", "http://localhost:11434")
-    model = config.get("model", "model", "gpt-3.5-turbo")
+    model = config.get("model", "name", "gpt-3.5-turbo")
 
     if llm_type == "OpenAI":
         return OpenAI(model=model, timeout=timeout)
@@ -61,36 +61,36 @@ def create_llm(llm_type: str, config: Optional[Config]):
 
 def llm_from_wrapper(llm_wrapper: LLM, config: Optional[Config]):
     if isinstance(llm_wrapper, OpenAILLM):
-        return create_llm("OpenAI", config)
+        return _create_llm("OpenAI", config)
     elif isinstance(llm_wrapper, ClaudeLLM):
-        return create_llm("Anthropic", config)
+        return _create_llm("Anthropic", config)
     elif isinstance(llm_wrapper, OllamaLLM):
-        return create_llm("Ollama", config)
+        return _create_llm("Ollama", config)
     elif isinstance(llm_wrapper, MistralLLM):
-        return create_llm("Mistral", config)
+        return _create_llm("Mistral", config)
     else:
         logger.error("Unsupported LLM wrapper type")
         raise ValueError("Unsupported LLM wrapper type")
 
 
 def _get_llm(config: Optional[Config]):
-    model = config.get("model", "model", "gpt-3.5-turbo")
+    model = config.get("model", "name", "gpt-3.5-turbo")
 
     if "gpt" in model:
         logger.info("OpenAI model selected")
-        return create_llm("OpenAI", config)
+        return _create_llm("OpenAI", config)
     elif "claude" in model:
         logger.info("Claude model selected")
-        return create_llm("Anthropic", config)
+        return _create_llm("Anthropic", config)
     elif "llama" in model:
         logger.info("Llama model selected")
-        return create_llm("Ollama", config)
+        return _create_llm("Ollama", config)
     elif any(keyword in model for keyword in ["mixtral", "mistral", "codestral"]):
         logger.info("Mistral model selected")
-        return create_llm("Mistral", config)
+        return _create_llm("Mistral", config)
     else:
         logger.info("Default OpenAI model selected")
-        return create_llm("OpenAI", config)
+        return _create_llm("OpenAI", config)
 
 
 def init_llm_settings(config: Config):

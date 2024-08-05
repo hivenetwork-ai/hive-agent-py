@@ -32,7 +32,7 @@ class HiveSwarm:
         description: str,
         instruction: str,
         llm: Optional[LLM],
-        functions:List[Callable],
+        functions: List[Callable],
         agents: List[HiveAgent] = None,
         config_path="../../hive_config_example.toml",
         swarm_id=os.getenv("HIVE_SWARM_ID", ""),

@@ -4,7 +4,7 @@ from llama_index.core.agent import ReActAgentWorker
 
 
 class OllamaLLM(LLM):
-    def __init__(self, tools, instruction="", tool_retriever=None):
+    def __init__(self, tools=None, instruction="", tool_retriever=None):
         super().__init__(tools, instruction, tool_retriever)
         self.agent = ReActAgentWorker.from_tools(
             tools,
