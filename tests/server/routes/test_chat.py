@@ -40,7 +40,7 @@ async def client(app):
 
 @pytest.mark.asyncio
 async def test_chat_no_messages(client):
-    payload = {"user_id": "user1", "session_id": "session1", "chat_data": {"messages": []}, "file_names": []}
+    payload = {"user_id": "user1", "session_id": "session1", "chat_data": {"messages": []}, "media_references": []}
     response = await client.post("/api/v1/chat", json=payload)
     assert response.status_code == status.HTTP_400_BAD_REQUEST
     assert "No messages provided" in response.json()["detail"]
@@ -58,7 +58,7 @@ async def test_chat_last_message_not_user(client):
                 {"role": MessageRole.SYSTEM, "content": "Another system message"},
             ]
         },
-        "file_names": [],
+        "media_references": [],
     }
     response = await client.post("/api/v1/chat", json=payload)
     assert response.status_code == status.HTTP_400_BAD_REQUEST
@@ -75,7 +75,7 @@ async def test_chat_success(client, agent):
             "user_id": "user1",
             "session_id": "session1",
             "chat_data": {"messages": [{"role": MessageRole.USER, "content": "Hello!"}]},
-            "file_names": [],
+            "media_references": [],
         }
         response = await client.post("/api/v1/chat", json=payload)
         assert response.status_code == status.HTTP_200_OK

@@ -73,7 +73,7 @@ class ChatManager:
 
         if isinstance(Settings.llm, OpenAIMultiModal):
             assistant_message = await self._handle_openai_multimodal(last_message, chat_history, image_document_paths)
-        elif isinstance(self.llm, OpenAIAgent):
+        elif isinstance(Settings.llm, OpenAIAgent):
             assistant_message = await self._handle_openai_agent(last_message, chat_history)
         else:
             assistant_message = await self._handle_generic_llm(last_message, chat_history)

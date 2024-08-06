@@ -58,7 +58,11 @@ def setup_chat_routes(router: APIRouter, llm_instance):
 
             return StreamingResponse(event_generator(), media_type="text/plain")
         else:
-            file_paths = [f"{BASE_DIR}/{f}" for f in chat_request.file_names] if chat_request.file_names else []
+            file_paths = (
+                [f"{BASE_DIR}/{media.value}" for media in chat_request.media_references if media.type == "file_name"]
+                if chat_request.media_references
+                else []
+            )
             response = await chat_manager.generate_response(db_manager, messages, last_chat_message, file_paths)
 
             return response

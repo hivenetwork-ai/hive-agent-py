@@ -1,3 +1,4 @@
+from enum import Enum
 from typing import List, Optional
 from pydantic import BaseModel
 from llama_index.core.llms import MessageRole
@@ -20,8 +21,18 @@ class ChatHistorySchema(BaseModel):
     timestamp: str
 
 
+class MediaType(Enum):
+    FILE_NAME = "file_name"
+    URL = "url"
+
+
+class MediaReference(BaseModel):
+    type: MediaType
+    value: str
+
+
 class ChatRequest(BaseModel):
     user_id: str
     session_id: str
     chat_data: ChatData
-    file_names: Optional[List[str]]
+    media_references: Optional[List[MediaReference]]
