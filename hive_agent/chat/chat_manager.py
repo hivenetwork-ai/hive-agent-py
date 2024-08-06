@@ -17,12 +17,12 @@ class ChatManager:
     async def add_message(self, db_manager: DatabaseManager, role: str, content: str):
         message = ChatMessage(role=role, content=content)
         data = {
-                "user_id": self.user_id,
-                "session_id": self.session_id,
-                "message": content,
-                "role": role,
-                "timestamp": datetime.utcnow().isoformat(),
-            }
+            "user_id": self.user_id,
+            "session_id": self.session_id,
+            "message": content,
+            "role": role,
+            "timestamp": datetime.utcnow().isoformat(),
+        }
         if "HIVE_AGENT_ID" in os.environ:
             data["agent_id"] = os.getenv("HIVE_AGENT_ID")
 

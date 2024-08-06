@@ -1,3 +1,5 @@
+import inspect
+
 import toml
 import os
 import logging
@@ -16,7 +18,12 @@ class Config:
 
     def load_config(self):
         """Loads the configuration file."""
-        return toml.load(self.config_path)
+        try:
+            with open(self.config_path, "r") as f:
+                config_data = toml.load(f)
+            return config_data
+        except FileNotFoundError:
+            raise FileNotFoundError(f"Config file not found: {self.config_path}")
 
     def get(self, section, key, default=None):
         """Gets a value from the configuration."""
