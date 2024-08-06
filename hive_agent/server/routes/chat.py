@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List
 
 from fastapi import APIRouter, HTTPException, Depends, Request, Query, status
@@ -9,10 +9,12 @@ from hive_agent.database.database import get_db, DatabaseManager
 from hive_agent.chat import ChatManager
 from hive_agent.chat.schemas import ChatHistorySchema, ChatRequest
 from llama_index.core.llms import ChatMessage, MessageRole
-from llama_index.agent.openai import OpenAIAgent
+from llama_index.agent.openai import OpenAIAgent  # type: ignore
+from hive_agent.filestore import FileStore, BASE_DIR
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+file_store = FileStore(BASE_DIR)
 
 
 def setup_chat_routes(router: APIRouter, llm_instance):
@@ -42,12 +44,8 @@ def setup_chat_routes(router: APIRouter, llm_instance):
                 detail="Last message must be from user",
             )
 
-        last_chat_message = ChatMessage(
-            role=last_message.role, content=last_message.content
-        )
-        messages = [
-            ChatMessage(role=m.role, content=m.content) for m in chat_data.messages
-        ]
+        last_chat_message = ChatMessage(role=last_message.role, content=last_message.content)
+        messages = [ChatMessage(role=m.role, content=m.content) for m in chat_data.messages]
 
         async def event_generator():
             async for token in response.async_response_gen():
@@ -57,11 +55,12 @@ def setup_chat_routes(router: APIRouter, llm_instance):
 
         if isinstance(chat_manager.llm, OpenAIAgent):
             response = await chat_manager.llm.astream_chat(last_message.content, messages)
+
             return StreamingResponse(event_generator(), media_type="text/plain")
         else:
-            response = await chat_manager.generate_response(
-                db_manager, messages, last_chat_message
-            )
+            file_paths = [f"{BASE_DIR}/{f}" for f in chat_request.file_names] if chat_request.file_names else []
+            response = await chat_manager.generate_response(db_manager, messages, last_chat_message, file_paths)
+
             return response
 
     @router.get("/chat_history", response_model=List[ChatHistorySchema])
@@ -85,15 +84,13 @@ def setup_chat_routes(router: APIRouter, llm_instance):
                 session_id=session_id,
                 message=msg.content,
                 role=msg.role,
-                timestamp=str(datetime.utcnow()),
+                timestamp=str(datetime.now(timezone.utc)),
             )
             for msg in chat_history
         ]
 
     @router.get("/all_chats")
-    async def get_all_chats(
-        user_id: str = Query(...), db: AsyncSession = Depends(get_db)
-    ):
+    async def get_all_chats(user_id: str = Query(...), db: AsyncSession = Depends(get_db)):
         chat_manager = ChatManager(llm_instance, user_id=user_id, session_id="")
         db_manager = DatabaseManager(db)
         all_chats = await chat_manager.get_all_chats_for_user(db_manager)

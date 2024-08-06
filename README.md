@@ -9,31 +9,39 @@ Join our Discord community for support and discussion.
 [![](https://dcbadge.limes.pink/api/server/vnJvW4wZp9)](https://discord.gg/vnJvW4wZp9)
 
 ## Project Requirements
+
 - Python >= 3.11
 
 ## Installation
 
 You can either directly install from pip:
+
 ```sh
-$ pip install git+https://github.com/hivenetwork-ai/hive-agent-py.git@main
+pip install git+https://github.com/hivenetwork-ai/hive-agent-py.git@main
 ```
+
 Or add it to your _requirements.txt_ file:
+
 ```sh
 hive-agent @ git+https://github.com/hivenetwork-ai/hive-agent-py@main
 ```
 
 ### Optional Dependencies
+
 To install with the optional web3 dependencies, you can specify them as follows:
+
 ```sh
-$ pip install git+https://github.com/hivenetwork-ai/hive-agent-py.git@main#egg=hive-agent[web3]
+pip install git+https://github.com/hivenetwork-ai/hive-agent-py.git@main#egg=hive-agent[web3]
 ```
 
 Or add it to your _requirements.txt_ file:
+
 ```sh
 hive-agent[web3] @ git+https://github.com/hivenetwork-ai/hive-agent-py@main
 ```
 
 ## Environment Setup
+
 You need to specify an `OPENAI_API_KEY` in a _.env_ file in this directory.
 
 Make a copy of the [.env.example](.env.example) file and rename it to _.env_.
@@ -49,6 +57,7 @@ To use a configuration file with your `HiveAgent`, follow these steps:
 2. **Specify the Configuration Path**:
 
    - When creating a `HiveAgent` instance, provide the relative or absolute path to your configuration file.
+
    ```python
    from hive_agent import HiveAgent
 
@@ -61,24 +70,27 @@ To use a configuration file with your `HiveAgent`, follow these steps:
        name="Simple Agent",
        functions=[],
        instruction="your instructions for this agent's goal",
-       config_path=get_config_path("hive_config.toml") # ./hive_config.toml works too 
+       config_path=get_config_path("hive_config.toml") # ./hive_config.toml works too
    )
    ```
 
 ## Usage
 
 First import the `HiveAgent` class:
+
 ```python
 from hive_agent import HiveAgent
 ```
 
 Load your environment variables:
+
 ```python
 from dotenv import load_dotenv
 load_dotenv()
 ```
 
 Then create a HiveAgent instance:
+
 ```python
 my_agent = HiveAgent(
     name="my_agent",
@@ -88,11 +100,13 @@ my_agent = HiveAgent(
 ```
 
 Then, run your agent:
+
 ```python
 my_agent.run()
 ```
 
 Finally, call the API endpoint, `/api/v1/chat`, to see the result:
+
 ```sh
 curl --location 'localhost:8000/api/v1/chat' \
 --header 'Content-Type: application/json' \
@@ -108,8 +122,10 @@ curl --location 'localhost:8000/api/v1/chat' \
 ```
 
 ### Adding tools
+
 You can create tools that help your agent handle more complex tasks. Here's an example:
-```python
+
+````python
 import os
 from typing import Optional, Dict
 from web3 import Web3
@@ -145,12 +161,12 @@ if __name__ == "__main__":
         name="my_agent",
         functions=[get_transaction_receipt]
     )
-    
+
     my_agent.run()
 
     """
     [1] send a request:
-    
+
     ```
     curl --location 'localhost:8000/api/v1/chat' \
     --header 'Content-Type: application/json' \
@@ -164,19 +180,21 @@ if __name__ == "__main__":
         }
     }'
     ```
-    
+
     [2] result:
-    
+
     The address that initiated the transaction with hash 0x5c504ed432cb51138bcf09aa5e8a410dd4a1e204ef84bfed1be16dfba1b22060 is 0xA1E4380A3B1f749673E270229993eE55F35663b4.
     """
-```
+````
+
 ### Adding Retriever
-You can add retriever tools to create vector embeddings and retrieve semantic information. It will create vector index for every pdf documents under 'hive-agent-data/files/user' folder and can filter files with required_exts parameter. 
 
-- Hive agent supports ".md", '.mdx' ,".txt", '.csv', '.docx', '.pdf' file types. 
-- Hive agent supports 4 type of retriever (basic, chroma, pinecone-serverless, pinecone-pod) and controlled with retrieval_tool parameter.  
+You can add retriever tools to create vector embeddings and retrieve semantic information. It will create vector index for every pdf documents under 'hive-agent-data/files/user' folder and can filter files with required_exts parameter.
 
-```python
+- Hive agent supports ".md", '.mdx' ,".txt", '.csv', '.docx', '.pdf' file types.
+- Hive agent supports 4 type of retriever (basic, chroma, pinecone-serverless, pinecone-pod) and controlled with retrieval_tool parameter.
+
+````python
 import os
 from typing import Optional, Dict
 from web3 import Web3
@@ -193,12 +211,12 @@ if __name__ == "__main__":
         required_exts = ['.md'],
         retrieval_tool='chroma'
     )
-    
+
     my_agent.run()
 
     """
     [1] send a request:
-    
+
     ```
     curl --location 'localhost:8000/api/v1/chat' \
     --header 'Content-Type: application/json' \
@@ -211,9 +229,10 @@ if __name__ == "__main__":
             ]
         }
     }'
-```
+````
 
 ### Tutorial
+
 The complete tutorial can be found at [./tutorial.md](./tutorial.md).
 
 ## Contributing
@@ -227,42 +246,65 @@ If you want to contribute to the codebase, you would need to set up your dev env
 - API keys for third-party tools are not provided.
   - `OPENAI_API_KEY` from OpenAI
 - If you don't have Poetry installed, you can install it using the following commands:
-```sh
-$ curl -sSL https://install.python-poetry.org | python3 -
 
-$ export PATH="$HOME/.local/bin:$PATH" 
+```sh
+curl -sSL https://install.python-poetry.org | python3 -
+
+export PATH="$HOME/.local/bin:$PATH"
 ```
+
 - Activate the Virtual Environment created by Poetry with the following command:
+
 ```sh
-$ poetry shell
+poetry shell
 ```
+
 - Install dependencies.
+
 ```sh
-$ poetry install --no-root
+poetry install --no-root
 ```
 
 ### Testing
 
 - Make sure you're in the `tests/` directory:
+
 ```sh
-$ cd tests/
+cd tests/
 ```
+
 - Run the test suite:
+
 ```sh
-$ pytest
+pytest
 ```
+
 - Run tests for a specific module:
+
 ```sh
-$ pytest tests/path/to/test_module.py
+pytest tests/path/to/test_module.py
 ```
+
 - Run with verbose output:
+
 ```sh
-$ pytest -v
+pytest -v
 ```
+
 - Run with a detailed output of each test (including print statements):
+
 ```sh
-$ pytest -s
+pytest -s
 ```
+
+- Run with coverage report:
+
+```sh
+pip install coverage pytest-cov
+pytest  --cov --cov-report=html
+```
+
+Reports file `tests/htmlcov/index.html`
 
 ## API Doc
 
@@ -270,4 +312,4 @@ Open [http://localhost:8000/docs](http://localhost:8000/docs) with your browser 
 
 ## Learn More
 
-https://hivenetwork.ai
+<https://hivenetwork.ai>

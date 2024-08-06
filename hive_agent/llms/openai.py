@@ -1,8 +1,7 @@
-from llama_index.agent.openai import OpenAIAgent
+from llama_index.agent.openai import OpenAIAgent  # type: ignore
 from llama_index.core.agent.react_multimodal.step import MultimodalReActAgentWorker
 from hive_agent.llms.llms import LLMs
 from llama_index.core.settings import Settings
-from llama_index.core.agent import Task
 
 
 class OpenAILLM(LLMs):

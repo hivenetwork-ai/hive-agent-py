@@ -6,24 +6,23 @@ from dotenv import load_dotenv
 load_dotenv()
 
 if "LANGTRACE_API_KEY" in os.environ:
-    from langtrace_python_sdk import langtrace
+    from langtrace_python_sdk import langtrace  # type: ignore
 
     langtrace.init(api_key=os.getenv("LANGTRACE_API_KEY"))
 
-from llama_index.llms.openai import OpenAI
-from llama_index.llms.anthropic import Anthropic
-from llama_index.llms.ollama import Ollama
-from llama_index.llms.mistralai import MistralAI
+from llama_index.llms.openai import OpenAI  # type: ignore
+from llama_index.llms.anthropic import Anthropic  # type: ignore
+from llama_index.llms.ollama import Ollama  # type: ignore
+from llama_index.llms.mistralai import MistralAI  # type: ignore
+from llama_index.multi_modal_llms.openai import OpenAIMultiModal  # type: ignore
 from llama_index.core.settings import Settings
-from hive_agent.config import Config
-from llama_index.multi_modal_llms.openai import OpenAIMultiModal
 
 
 def init_llm_settings(config):
     model = config.get("model", "model", "gpt-3.5-turbo")
     ollama_server_url = config.get("model", "ollama_server_url", "http://localhost:11434")
 
-    if "gpt-4" in model:  # todo startswith
+    if model.startswith("gpt-4"):
         Settings.llm = OpenAIMultiModal(model, api_key=os.getenv("OPENAI_API_KEY"), max_new_tokens=300)
     elif "gpt" in model:
         Settings.llm = OpenAI(model=model, request_timeout=config.get("timeout", "llm", 30))

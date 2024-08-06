@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 from pydantic import BaseModel
 from llama_index.core.llms import MessageRole
 
@@ -24,3 +24,4 @@ class ChatRequest(BaseModel):
     user_id: str
     session_id: str
     chat_data: ChatData
+    file_names: Optional[List[str]]

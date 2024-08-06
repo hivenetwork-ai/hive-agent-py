@@ -1,1 +1,1 @@
-from .agent import HiveAgent
+from .agent import HiveAgent  # noqa
