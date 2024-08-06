@@ -6,7 +6,7 @@ After starting the Hive Agent server with `agent.run()`, the following endpoints
 
 ### **POST /api/v1/chat**
 
-This endpoint processes natural language queries and returns responses from the configured OpenAI model.
+This endpoint processes natural language queries and returns responses from the configured OpenAI model. This also supports a reference to a previously uploaded file.
 
 **Request Body:**
 
@@ -50,6 +50,36 @@ curl --request POST \
         ]
     }
   }'
+```
+
+### **POST /api/v1/chat_media**
+
+This endpoint processes natural language queries with documents and returns responses from the configured OpenAI model.
+
+**Request Body:**
+
+The request body should be sent as multipart/form-data and include the following fields:
+
+• user_id (string): The ID of the user.
+• session_id (string): The ID of the session.
+• chat_data (string): A JSON string representing the chat messages. The JSON should include an array of message objects, each with a role ('user', 'assistant', etc.) and content.
+• files (file): One or more files that the query refers to.
+
+**Response:**
+
+- A streaming response that returns the conversation or information from the agent.
+
+**Usage Example:**
+
+```bash
+curl --request POST \
+  --url http://localhost:8000/api/v1/chat_media \
+  --header 'Content-Type: multipart/form-data' \
+  --form 'user_id="test"' \
+  --form 'session_id="test"' \
+  --form 'chat_data={ "messages": [ { "role": "user", "content": "What is in these images?" } ] }' \
+  --form 'files=@/path/to/your/image1.png' \
+  --form 'files=@/path/to/your/image2.png'
 ```
 
 ### **GET /api/v1/chat_history**

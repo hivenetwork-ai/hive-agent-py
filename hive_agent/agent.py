@@ -265,7 +265,4 @@ class HiveAgent:
         else:
             agent_class = OpenAILLM
 
-        print("###test", model)
-        print(f"###testAssigning agent class: {agent_class.__class__.__name__}")  # Debugging line
-
         self.__agent = agent_class(tools, self.instruction, tool_retriever).agent

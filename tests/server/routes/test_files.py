@@ -1,7 +1,7 @@
 import os
 import pytest
 import shutil
-from unittest.mock import MagicMock,patch
+from unittest.mock import MagicMock, patch
 
 from fastapi import FastAPI, APIRouter
 from httpx import AsyncClient
@@ -32,11 +32,12 @@ def app(file_store):
 
 @pytest.fixture
 async def client(app):
-    with patch('hive_agent.tools.retriever.base_retrieve.RetrieverBase.create_basic_index'
-    ), patch('hive_agent.tools.retriever.base_retrieve.RetrieverBase.insert_documents'
-    ), patch.object(IndexStore, 'save_to_file', MagicMock()):
+    with patch("hive_agent.tools.retriever.base_retrieve.RetrieverBase.create_basic_index"), patch(
+        "hive_agent.tools.retriever.base_retrieve.RetrieverBase.insert_documents"
+    ), patch.object(IndexStore, "save_to_file", MagicMock()):
         async with AsyncClient(app=app, base_url="http://test") as test_client:
             yield test_client
+
 
 @pytest.mark.asyncio
 async def test_list_files(client):
@@ -73,9 +74,7 @@ async def test_rename_file(client):
 
     response = await client.put("/files/old_name.txt/new_name.txt")
     assert response.status_code == 200
-    assert response.json() == {
-        "message": "File old_name.txt renamed to new_name.txt successfully."
-    }
+    assert response.json() == {"message": "File old_name.txt renamed to new_name.txt successfully."}
 
     # ensure file system updates
     # await asyncio.sleep(5)

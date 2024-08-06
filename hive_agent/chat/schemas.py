@@ -35,4 +35,4 @@ class ChatRequest(BaseModel):
     user_id: str
     session_id: str
     chat_data: ChatData
-    media_references: Optional[List[MediaReference]]
+    media_references: Optional[List[MediaReference]] = None

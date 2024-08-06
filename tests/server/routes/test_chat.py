@@ -2,6 +2,7 @@ import pytest
 from fastapi import APIRouter, FastAPI, status
 from httpx import AsyncClient
 from unittest.mock import AsyncMock, patch
+from io import BytesIO
 
 from llama_index.core.llms import ChatMessage, MessageRole
 from hive_agent.server.routes.chat import setup_chat_routes
@@ -78,6 +79,53 @@ async def test_chat_success(client, agent):
             "media_references": [],
         }
         response = await client.post("/api/v1/chat", json=payload)
+        assert response.status_code == status.HTTP_200_OK
+        assert response.text == "chat response" or response.text == '"chat response"'
+
+
+@pytest.mark.asyncio
+async def test_chat_media_no_files(client):
+    payload = {
+        "user_id": "user1",
+        "session_id": "session1",
+        "chat_data": '{"messages":[{"role": "USER", "content": "Hello!"}]}',
+    }
+    response = await client.post("/api/v1/chat_media", data=payload)
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+
+
+@pytest.mark.asyncio
+async def test_chat_media_malformed_chat_data(client):
+    payload = {"user_id": "user1", "session_id": "session1", "chat_data": "invalid_json"}
+    files = [("files", ("test.txt", BytesIO(b"test content"), "text/plain"))]
+
+    response = await client.post("/api/v1/chat_media", data=payload, files={**dict(files)})
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert "Chat data is malformed" in response.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_chat_media_success(client, agent):
+    mock_chat_manager = AsyncMock()
+    mock_chat_manager.generate_response.return_value = "chat response"
+
+    with patch("hive_agent.server.routes.chat.ChatManager", return_value=mock_chat_manager), patch(
+        "hive_agent.server.routes.chat.file_store.save_file", new_callable=AsyncMock
+    ) as mock_save_file:
+
+        mock_save_file.return_value = "file_path.txt"
+
+        payload = {
+            "user_id": "user1",
+            "session_id": "session1",
+            "chat_data": '{"messages":[{"role": "user", "content": "Hello!"}]}',
+        }
+
+        files = [("files", ("test.txt", BytesIO(b"test content"), "text/plain"))]
+
+        response = await client.post("/api/v1/chat_media", data=payload, files={**dict(files)})
+
         assert response.status_code == status.HTTP_200_OK
         assert response.text == "chat response" or response.text == '"chat response"'
 
