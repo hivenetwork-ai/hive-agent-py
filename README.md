@@ -8,6 +8,40 @@ Join our Discord community for support and discussion.
 
 [![](https://dcbadge.limes.pink/api/server/vnJvW4wZp9)](https://discord.gg/vnJvW4wZp9)
 
+## Supported Large Language Models (LLMs)
+- OpenAI
+  - gpt-4o
+  - gpt-4o-mini
+  - gpt-4-turbo
+  - gpt-4
+  - gpt-3.5-turbo
+  - gpt-3.5-turbo-instruct
+- Anthropic
+  - claude-3-opus-20240229
+  - claude-3-sonnet-20240229
+  - claude-3-haiku-20240307
+- MistralAI
+   - mistral-large-latest
+   - mistral-small-latest
+   - open-mixtral-8x22b
+   - codestral-latest
+- Popular open source LLMs
+   - llama3.1:latest
+   - llava
+   - gemma2:2b
+   - gemma2
+   - gemma:7b
+   - gemma:2b
+   - gemma2:27b
+   - codegemma
+   - mistral-nemo
+   - deepseek-coder-v2
+   - phi3:mini
+   - phi3:medium
+   - command-r
+   - command-r-plus
+   - and any supported by [Ollama](https://ollama.com/library)
+
 ## Project Requirements
 - Python >= 3.11
 
