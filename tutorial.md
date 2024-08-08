@@ -6,7 +6,7 @@ After starting the Hive Agent server with `agent.run()`, the following endpoints
 
 ### **POST /api/v1/chat**
 
-This endpoint processes natural language queries and returns responses from the configured OpenAI model.
+This endpoint processes natural language queries and returns responses from the configured OpenAI model. This also supports a reference to a previously uploaded file.
 
 **Request Body:**
 
@@ -21,11 +21,18 @@ This endpoint processes natural language queries and returns responses from the 
         "content": "Your query here"
       }
     ]
-  }
+  },
+  "media_references": [
+    {
+      "type": "file_name",
+      "value": "test-image.png" // referencing to the filename uploaded via File Management Endpoints below
+    }
+  ]
 }
 ```
 
 **Response:**
+
 - A streaming response that returns the conversation or information from the agent.
 
 **Usage Example:**
@@ -45,6 +52,36 @@ curl --request POST \
   }'
 ```
 
+### **POST /api/v1/chat_media**
+
+This endpoint processes natural language queries with documents and returns responses from the configured OpenAI model.
+
+**Request Body:**
+
+The request body should be sent as multipart/form-data and include the following fields:
+
+• user_id (string): The ID of the user.
+• session_id (string): The ID of the session.
+• chat_data (string): A JSON string representing the chat messages. The JSON should include an array of message objects, each with a role ('user', 'assistant', etc.) and content.
+• files (file): One or more files that the query refers to.
+
+**Response:**
+
+- A streaming response that returns the conversation or information from the agent.
+
+**Usage Example:**
+
+```bash
+curl --request POST \
+  --url http://localhost:8000/api/v1/chat_media \
+  --header 'Content-Type: multipart/form-data' \
+  --form 'user_id="test"' \
+  --form 'session_id="test"' \
+  --form 'chat_data={ "messages": [ { "role": "user", "content": "What is in these images?" } ] }' \
+  --form 'files=@/path/to/your/image1.png' \
+  --form 'files=@/path/to/your/image2.png'
+```
+
 ### **GET /api/v1/chat_history**
 
 This endpoint retrieves the chat history for a specified user and session.
@@ -55,6 +92,7 @@ This endpoint retrieves the chat history for a specified user and session.
 - `session_id`: The session ID.
 
 **Response:**
+
 - A JSON array of the chat history.
 
 **Usage Example:**
@@ -73,6 +111,7 @@ This endpoint retrieves all chats for a specified user, organized by session ID.
 - `user_id`: The user ID.
 
 **Response:**
+
 - A JSON object where each key is a `session_id` and the value is an array of chat messages for that session.
 
 **Usage Example:**
@@ -83,6 +122,7 @@ curl --request GET \
 ```
 
 ## Database Endpoints
+
 Ensure you set the `HIVE_AGENT_DATABASE_URL` environment variable.
 
 ### **POST /api/v1/database/create-table**
@@ -102,6 +142,7 @@ This endpoint creates a new table in the database.
 ```
 
 **Response:**
+
 - A JSON object indicating the success of the table creation.
 
 **Usage Example:**
@@ -130,6 +171,7 @@ This endpoint inserts data into a specified table.
 ```
 
 **Response:**
+
 - A JSON object indicating the success of the data insertion and the ID of the inserted record.
 
 **Usage Example:**
@@ -157,6 +199,7 @@ This endpoint reads data from a specified table based on given filters.
 ```
 
 **Response:**
+
 - A JSON array of the matching records.
 
 **Usage Example:**
@@ -185,6 +228,7 @@ This endpoint updates data in a specified table.
 ```
 
 **Response:**
+
 - A JSON object indicating the success of the data update.
 
 **Usage Example:**
@@ -210,6 +254,7 @@ This endpoint deletes data from a specified table.
 ```
 
 **Response:**
+
 - A JSON object indicating the success of the data deletion.
 
 **Usage Example:**
@@ -234,6 +279,7 @@ This endpoint allows you to upload one or more files to the server.
 - Multipart form data containing files.
 
 **Response:**
+
 - A JSON object with the names of the uploaded files.
 
 **Usage Example:**
@@ -251,9 +297,11 @@ curl --request POST \
 This endpoint lists all files stored on the server.
 
 **Response:**
+
 - A JSON object containing a list of file names.
 
 **Usage Example:**
+
 ```bash
 curl --request GET \
   --url http://localhost:8000/api/v1/files/
@@ -269,9 +317,11 @@ This endpoint renames a specified file on the server.
 - new_filename: The new name for the file.
 
 **Response:**
+
 - A JSON object indicating the success of the file renaming.
 
 **Usage Example:**
+
 ```bash
 curl --request PUT \
   --url http://localhost:8000/api/v1/files/old_name.txt/new_name.txt
@@ -286,9 +336,11 @@ This endpoint deletes a specified file from the server.
 - filename: The name of the file to be deleted.
 
 **Response:**
+
 - A JSON object indicating the success of the file deletion.
 
 **Usage Example:**
+
 ```bash
 curl --request DELETE \
   --url http://localhost:8000/api/v1/files/test_delete.txt
@@ -298,26 +350,28 @@ curl --request DELETE \
 
 ### **POST /api/v1/create_index/?{index_name}&{index_type}'**
 
-This endpoint create an index 
+This endpoint create an index
 
 **URL Parameters:**
 
 - index_name: The name of the index.
-- index_type: You can choose one of them 'basic', 'chroma', 'pinecone-serverless', 'pinecone-pod' 
-
+- index_type: You can choose one of them 'basic', 'chroma', 'pinecone-serverless', 'pinecone-pod'
 
 **Request Body:**
 
 ```json
 [
-  "hive-agent-data/files/user/{yourfilename1}", "hive-agent-data/files/user/{yourfilename2}",
+  "hive-agent-data/files/user/{yourfilename1}",
+  "hive-agent-data/files/user/{yourfilename2}"
 ]
 ```
 
 **Response:**
+
 - A JSON object indicating the success of the index creation.
 
 **Usage Example:**
+
 ```bash
 curl -X 'POST' \
   'http://0.0.0.0:8000/api/v1/create_index/?index_name=test&index_type=chroma' \
@@ -340,14 +394,17 @@ This endpoint inserts documents into an existing index.
 
 ```json
 [
-  "hive-agent-data/files/user/{yourfilename1}", "hive-agent-data/files/user/{yourfilename2}",
+  "hive-agent-data/files/user/{yourfilename1}",
+  "hive-agent-data/files/user/{yourfilename2}"
 ]
 ```
 
 **Response:**
+
 - A JSON object indicating the success of the document insertion.
 
 **Usage Example:**
+
 ```bash
 curl -X 'POST' \
   'http://0.0.0.0:8000/api/v1/insert_documents/?index_name=test' \
@@ -370,14 +427,17 @@ This endpoint updates documents in an existing index.
 
 ```json
 [
-  "hive-agent-data/files/user/{yourfilename1}", "hive-agent-data/files/user/{yourfilename2}",
+  "hive-agent-data/files/user/{yourfilename1}",
+  "hive-agent-data/files/user/{yourfilename2}"
 ]
 ```
 
 **Response:**
+
 - A JSON object indicating the success of the document update.
 
 **Usage Example:**
+
 ```bash
 curl -X 'PUT' \
   'http://0.0.0.0:8000/api/v1/update_documents/?index_name=test' \
@@ -388,7 +448,6 @@ curl -X 'PUT' \
 ]'
 ```
 
-
 ### **DELETE /api/v1/delete_documents/?{index_name}**
 
 This endpoint deletes documents from an existing index.
@@ -398,16 +457,20 @@ This endpoint deletes documents from an existing index.
 - index_name: The name of the index to delete documents from.
 
 **Request Body:**
+
 ```json
 [
-  "hive-agent-data/files/user/{yourfilename1}", "hive-agent-data/files/user/{yourfilename2}",
+  "hive-agent-data/files/user/{yourfilename1}",
+  "hive-agent-data/files/user/{yourfilename2}"
 ]
 ```
 
 **Response:**
+
 - A JSON object indicating the success of the document deletion.
 
 **Usage Example:**
+
 ```bash
 curl -X 'DELETE' \
   'http://0.0.0.0:8000/api/v1/delete_documents/?index_name=test' \

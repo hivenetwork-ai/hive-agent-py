@@ -5,18 +5,15 @@ import sys
 import uvicorn
 import os
 
-from typing import Callable, List, Any
+from typing import Callable, List, Any, TYPE_CHECKING
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from llama_index.agent.openai import OpenAIAgent
-from llama_index.core.agent import FunctionCallingAgentWorker
+from llama_index.agent.openai import OpenAIAgent  # type: ignore   # noqa
+from llama_index.core.agent import FunctionCallingAgentWorker  # noqa
 
-from hive_agent.llms import OpenAILLM
-from hive_agent.llms import ClaudeLLM
-from hive_agent.llms import MistralLLM
-from hive_agent.llms import OllamaLLM
+from hive_agent.llms import OpenAIMultiModalLLM, OpenAILLM, ClaudeLLM, MistralLLM, OllamaLLM
 
 from llama_index.core.llms import ChatMessage
 from llama_index.core.tools import FunctionTool
@@ -25,12 +22,7 @@ from hive_agent.llm_settings import init_llm_settings
 from hive_agent.server.routes import setup_routes, files
 from hive_agent.tools.agent_db import get_db_schemas, text_2_sql
 
-from hive_agent.tools.retriever.base_retrieve import (
-    RetrieverBase,
-    IndexStore,
-    supported_exts,
-    index_base_dir
-)
+from hive_agent.tools.retriever.base_retrieve import RetrieverBase, IndexStore, supported_exts, index_base_dir
 
 from hive_agent.tools.retriever.chroma_retrieve import ChromaRetriever
 from hive_agent.tools.retriever.pinecone_retrieve import PineconeRetriever
@@ -39,12 +31,17 @@ from llama_index.core.objects import ObjectIndex
 from dotenv import load_dotenv
 from hive_agent.config import Config
 
+
 load_dotenv()
 
 
 class HiveAgent:
     name: str
-    wallet_store: "WalletStore"  # this attribute will be conditionally initialized
+
+    if TYPE_CHECKING:
+        from hive_agent.wallet import WalletStore
+
+    wallet_store: "WalletStore"
     __agent: Any
 
     def __init__(
@@ -70,7 +67,7 @@ class HiveAgent:
         self.shutdown_event = asyncio.Event()
         self.instruction = instruction
         self.__role__ = role
-        self.optional_dependencies = {}
+        self.optional_dependencies: dict[str, bool] = {}
         self.config = Config(config_path=config_path)
         self.retrieve = retrieve
         self.required_exts = required_exts
@@ -87,11 +84,19 @@ class HiveAgent:
 
     def _check_optional_dependencies(self):
         try:
-            from web3 import Web3
+            from web3 import Web3  # noqa
 
             self.optional_dependencies["web3"] = True
         except ImportError:
             self.optional_dependencies["web3"] = False
+
+    def is_dir_not_empty(self, path):
+        if os.path.exists(path):
+            if os.path.isfile(path):
+                return os.path.getsize(path) > 0
+            elif os.path.isdir(path):
+                return bool(os.listdir(path))
+        return False
 
     def __setup(self):
         init_llm_settings(self.config)
@@ -102,34 +107,17 @@ class HiveAgent:
 
         tools = custom_tools + system_tools
 
-        is_base_dir_not_empty = lambda: os.path.exists(files.BASE_DIR) and (
-            os.path.getsize(files.BASE_DIR) > 0
-            if os.path.isfile(files.BASE_DIR)
-            else (
-                bool(os.listdir(files.BASE_DIR))
-                if os.path.isdir(files.BASE_DIR)
-                else False
-            )
-        )
-    
-        is_index_dir_not_empty = lambda: os.path.exists(index_base_dir) and (
-            os.path.getsize(index_base_dir) > 0
-            if os.path.isfile(index_base_dir)
-            else (
-                bool(os.listdir(index_base_dir))
-                if os.path.isdir(index_base_dir)
-                else False
-            )
-        )
-        if is_index_dir_not_empty() == True and self.load_index_file == True:
+        is_base_dir_not_empty = self.is_dir_not_empty(files.BASE_DIR)
+        is_index_dir_not_empty = self.is_dir_not_empty(index_base_dir)
+
+        if is_index_dir_not_empty and self.load_index_file:
             index_store = IndexStore.load_from_file()
-        
         else:
             index_store = IndexStore.get_instance()
-        
-        tool_retriever = None 
 
-        if is_base_dir_not_empty() == True and self.retrieve == True:
+        tool_retriever = None
+
+        if is_base_dir_not_empty and self.retrieve:
             if "basic" in self.retrieval_tool:
                 retriever = RetrieverBase()
                 index = retriever.create_basic_index()
@@ -152,7 +140,7 @@ class HiveAgent:
 
             index_store.save_to_file()
 
-        if self.load_index_file == True or self.retrieve == True:
+        if self.load_index_file or self.retrieve:
             vectorstore_object = ObjectIndex.from_objects(
                 tools,
                 index=index_store.get_all_indexes(),
@@ -160,17 +148,7 @@ class HiveAgent:
             tool_retriever = vectorstore_object.as_retriever(similarity_top_k=3)
             tools = []  # Cannot specify both tools and tool_retriever
 
-        model = self.config.get("model", "model", "gpt-3.5-turbo")
-        if "gpt" in model:
-            self.__agent = OpenAILLM(tools, self.instruction, tool_retriever).agent
-        elif "claude" in model:
-            self.__agent = ClaudeLLM(tools, self.instruction, tool_retriever).agent
-        elif "llama" in model:
-            self.__agent = OllamaLLM(tools, self.instruction, tool_retriever).agent
-        elif "mixtral" or "mistral" in model:
-            self.__agent = MistralLLM(tools, self.instruction, tool_retriever).agent
-        else:
-            self.__agent = OpenAILLM(tools, self.instruction, tool_retriever).agent
+        self._assign_agent(tools, tool_retriever)
 
         if self.optional_dependencies.get("web3"):
             from hive_agent.wallet import WalletStore
@@ -179,9 +157,7 @@ class HiveAgent:
             self.wallet_store.add_wallet()
         else:
             self.wallet_store = None
-            self.logger.warning(
-                "'web3' extras not installed. Web3-related functionality will not be available."
-            )
+            self.logger.warning("'web3' extras not installed. Web3-related functionality will not be available.")
 
         self.__setup_server()
 
@@ -198,15 +174,11 @@ class HiveAgent:
         signal.signal(signal.SIGTERM, self.__signal_handler)
 
     def configure_cors(self):
-        environment = self.config.get(
-            "environment", "type"
-        )  # default to 'development' if not set
+        environment = self.config.get("environment", "type")  # default to 'development' if not set
 
         if environment == "dev":
             logger = logging.getLogger("uvicorn")
-            logger.warning(
-                "Running in development mode - allowing CORS for all origins"
-            )
+            logger.warning("Running in development mode - allowing CORS for all origins")
             self.app.add_middleware(
                 CORSMiddleware,
                 allow_origins=["*"],
@@ -217,15 +189,11 @@ class HiveAgent:
 
     async def run_server(self):
         try:
-            config = uvicorn.Config(
-                app=self.app, host=self.host, port=self.port, loop="asyncio"
-            )
+            config = uvicorn.Config(app=self.app, host=self.host, port=self.port, loop="asyncio")
             server = uvicorn.Server(config)
             await server.serve()
         except Exception as e:
-            logging.error(
-                f"unexpected error while running the server: {e}", exc_info=True
-            )
+            logging.error(f"unexpected error while running the server: {e}", exc_info=True)
         finally:
             await self.__cleanup()
 
@@ -234,16 +202,10 @@ class HiveAgent:
             loop = asyncio.get_event_loop()
             loop.run_until_complete(self.run_server())
         except Exception as e:
-            logging.error(
-                f"An error occurred in the main event loop: {e}", exc_info=True
-            )
+            logging.error(f"An error occurred in the main event loop: {e}", exc_info=True)
 
     def chat_history(self) -> List[ChatMessage]:
         return self.__agent.chat_history
-
-    @staticmethod
-    def _tools_from_funcs(funcs: List[Callable]) -> List[FunctionTool]:
-        return [FunctionTool.from_defaults(fn=func) for func in funcs]
 
     def __signal_handler(self, signum, frame):
         logging.info(f"signal {signum} received, initiating graceful shutdown...")
@@ -280,19 +242,27 @@ class HiveAgent:
         index_store = IndexStore.get_instance()
 
         vectorstore_object = ObjectIndex.from_objects(
-                tools,
-                index=index_store.get_all_indexes(),
-            )
+            tools,
+            index=index_store.get_all_indexes(),
+        )
         tool_retriever = vectorstore_object.as_retriever(similarity_top_k=3)
         tools = []  # Cannot specify both tools and tool_retriever
+        self._assign_agent(tools, tool_retriever)
+
+    def _assign_agent(self, tools, tool_retriever):
         model = self.config.get("model", "model", "gpt-3.5-turbo")
-        if "gpt" in model:
-            self.__agent = OpenAILLM(tools, self.instruction, tool_retriever).agent
+
+        if model.startswith("gpt-4"):
+            agent_class = OpenAIMultiModalLLM
+        elif "gpt" in model:
+            agent_class = OpenAILLM
         elif "claude" in model:
-            self.__agent = ClaudeLLM(tools, self.instruction, tool_retriever).agent
+            agent_class = ClaudeLLM
         elif "llama" in model:
-            self.__agent = OllamaLLM(tools, self.instruction, tool_retriever).agent
-        elif "mixtral" or "mistral" in model:
-            self.__agent = MistralLLM(tools, self.instruction, tool_retriever).agent
+            agent_class = OllamaLLM
+        elif "mixtral" in model or "mistral" in model:
+            agent_class = MistralLLM
         else:
-            self.__agent = OpenAILLM(tools, self.instruction, tool_retriever).agent
+            agent_class = OpenAILLM
+
+        self.__agent = agent_class(tools, self.instruction, tool_retriever).agent

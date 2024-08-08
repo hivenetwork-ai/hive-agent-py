@@ -3,6 +3,7 @@ import shutil
 import logging
 from fastapi import UploadFile
 
+BASE_DIR = "hive-agent-data/files/user"
 
 # TODO: get log level from config
 logging.basicConfig(level=logging.INFO)
@@ -16,7 +17,7 @@ class FileStore:
         logger.info(f"Initialized FileStore with base directory: {self.base_dir}")
 
     async def save_file(self, file: UploadFile):
-        filename = os.path.basename(file.filename)
+        filename = os.path.basename(str(file.filename))
         if not filename:
             logger.error("Attempted to save a file with an empty name.")
             raise ValueError("Filename cannot be empty.")
@@ -74,9 +75,7 @@ class FileStore:
                 logger.info(f"Renamed file from {old_filename} to {new_filename}")
                 return True
             except Exception as e:
-                logger.error(
-                    f"Failed to rename file from {old_filename} to {new_filename}: {e}"
-                )
+                logger.error(f"Failed to rename file from {old_filename} to {new_filename}: {e}")
                 raise IOError(f"Error renaming file {old_filename}")
         else:
             logger.warning(f"Attempted to rename non-existent file: {old_filename}")

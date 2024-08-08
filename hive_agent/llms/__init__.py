@@ -1,3 +1,4 @@
+from .openai import OpenAIMultiModalLLM
 from .openai import OpenAILLM
 from .claude import ClaudeLLM
 from .ollama import OllamaLLM

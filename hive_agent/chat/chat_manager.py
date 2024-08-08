@@ -1,30 +1,35 @@
 import os
-from datetime import datetime
-from typing import List
-from llama_index.agent.openai import OpenAIAgent
+from datetime import datetime, timezone
+from typing import Any, List
+
+from llama_index.agent.openai import OpenAIAgent  # type: ignore
 from llama_index.core.llms import ChatMessage, MessageRole
+from llama_index.multi_modal_llms.openai import OpenAIMultiModal  # type: ignore   # noqa
+from llama_index.core.schema import ImageDocument
+from llama_index.core.settings import Settings
+from llama_index.core.agent.runner.base import AgentRunner
+from llama_index.core.memory import ChatMemoryBuffer
 
 from hive_agent.database.database import DatabaseManager
 
 
 class ChatManager:
     def __init__(self, llm, user_id: str, session_id: str):
-        self.llm = llm
+        self.llm: AgentRunner = llm
         self.user_id = user_id
         self.session_id = session_id
         self.chat_store_key = f"{user_id}_{session_id}"
 
-    async def add_message(self, db_manager: DatabaseManager, role: str, content: str):
-        message = ChatMessage(role=role, content=content)
+    async def add_message(self, db_manager: DatabaseManager, role: str, content: Any | None):
         data = {
-                "user_id": self.user_id,
-                "session_id": self.session_id,
-                "message": content,
-                "role": role,
-                "timestamp": datetime.utcnow().isoformat(),
-            }
+            "user_id": self.user_id,
+            "session_id": self.session_id,
+            "message": content,
+            "role": role,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        }
         if "HIVE_AGENT_ID" in os.environ:
-            data["agent_id"] = os.getenv("HIVE_AGENT_ID")
+            data["agent_id"] = os.getenv("HIVE_AGENT_ID", "")
 
         await db_manager.insert_data(
             table_name="chats",
@@ -34,17 +39,14 @@ class ChatManager:
     async def get_messages(self, db_manager: DatabaseManager):
         filters = {"user_id": [self.user_id], "session_id": [self.session_id]}
         db_chat_history = await db_manager.read_data("chats", filters)
-        chat_history = [
-            ChatMessage(role=chat["role"], content=chat["message"])
-            for chat in db_chat_history
-        ]
+        chat_history = [ChatMessage(role=chat["role"], content=chat["message"]) for chat in db_chat_history]
         return chat_history
 
     async def get_all_chats_for_user(self, db_manager: DatabaseManager):
         filters = {"user_id": [self.user_id]}
         db_chat_history = await db_manager.read_data("chats", filters)
 
-        chats_by_session = {}
+        chats_by_session: dict[str, list] = {}
         for chat in db_chat_history:
             session_id = chat["session_id"]
             if session_id not in chats_by_session:
@@ -64,27 +66,54 @@ class ChatManager:
         db_manager: DatabaseManager,
         messages: List[ChatMessage],
         last_message: ChatMessage,
-    ):
+        image_document_paths: List[str],
+    ) -> str:
         chat_history = await self.get_messages(db_manager)
-        await self.add_message(
-            db_manager, last_message.role.value, last_message.content
-        )
+        await self.add_message(db_manager, last_message.role.value, last_message.content)
 
-        if isinstance(self.llm, OpenAIAgent):
-            response_stream = await self.llm.astream_chat(
-                last_message.content, chat_history=chat_history
-            )
-            assistant_message = "".join(
-                [token async for token in response_stream.async_response_gen()]
-            )
+        if isinstance(Settings.llm, OpenAIMultiModal):
+            assistant_message = await self._handle_openai_multimodal(last_message, chat_history, image_document_paths)
+        elif isinstance(Settings.llm, OpenAIAgent):
+            assistant_message = await self._handle_openai_agent(last_message, chat_history)
         else:
-            response = await self.llm.achat(
-                last_message.content, chat_history=chat_history
-            )
-            assistant_message = (
-                response.response if hasattr(response, "response") else str(response)
-            )
+            assistant_message = await self._handle_generic_llm(last_message, chat_history)
 
         await self.add_message(db_manager, MessageRole.ASSISTANT, assistant_message)
-
         return assistant_message
+
+    async def _handle_openai_multimodal(
+        self,
+        last_message: ChatMessage,
+        chat_history: List[ChatMessage],
+        image_document_paths: List[str],
+    ) -> str:
+        image_documents = [ImageDocument(image_path=image_path) for image_path in image_document_paths]
+        self.llm.memory = ChatMemoryBuffer.from_defaults(chat_history=chat_history)
+        task = self.llm.create_task(str(last_message.content), extra_state={"image_docs": image_documents})
+
+        return await self._execute_task(task.task_id)
+
+    async def _handle_openai_agent(
+        self,
+        last_message: ChatMessage,
+        chat_history: List[ChatMessage],
+    ) -> str:
+        response_stream = await self.llm.astream_chat(last_message.content, chat_history=chat_history)
+        return "".join([token async for token in response_stream.async_response_gen()])
+
+    async def _handle_generic_llm(
+        self,
+        last_message: ChatMessage,
+        chat_history: List[ChatMessage],
+    ) -> str:
+        response = await self.llm.achat(last_message.content, chat_history=chat_history)
+        return getattr(response, "response", str(response))
+
+    async def _execute_task(self, task_id: str) -> str:
+        while True:
+            try:
+                response = await self.llm._arun_step(task_id)
+                if response.is_last:
+                    return str(self.llm.finalize_response(task_id))
+            except Exception as e:
+                return f"error during step execution: {str(e)}"
