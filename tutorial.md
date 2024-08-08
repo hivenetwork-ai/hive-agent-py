@@ -60,10 +60,10 @@ This endpoint processes natural language queries with documents and returns resp
 
 The request body should be sent as multipart/form-data and include the following fields:
 
-• user_id (string): The ID of the user.
-• session_id (string): The ID of the session.
-• chat_data (string): A JSON string representing the chat messages. The JSON should include an array of message objects, each with a role ('user', 'assistant', etc.) and content.
-• files (file): One or more files that the query refers to.
+* user_id (string): The ID of the user.
+* session_id (string): The ID of the session.
+* chat_data (string): A JSON string representing the chat messages. The JSON should include an array of message objects, each with a role ('user', 'assistant', etc.) and content.
+* files (file): One or more files that the query refers to.
 
 **Response:**
 
