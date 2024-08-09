@@ -12,7 +12,7 @@ setup(
         "python-dotenv==1.0.1",
         "llama-index==0.10.59",
         "llama-index-llms-anthropic==0.1.16",
-        "llama-index-llms-mistralai==0.1.19",
+        "llama-index-llms-mistralai==0.1.20",
         "llama-index-llms-ollama==0.2.2",
         "llama-index-llms-openai==0.1.27",
         "chromadb==0.5.5",
