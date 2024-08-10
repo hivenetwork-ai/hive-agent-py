@@ -8,6 +8,8 @@ from hive_agent.tools.retriever.base_retrieve import IndexStore
 from llama_index.core.agent.runner.base import AgentRunner
 from hive_agent.tools.agent_db import get_db_schemas, text_2_sql
 from llama_index.core.objects import ObjectIndex
+from hive_agent.sdk_context import SDKContext
+
 
 
 @pytest.fixture
@@ -28,8 +30,6 @@ def agent():
         "llama_index.core.objects.ObjectIndex.from_objects"
     ), patch.object(
         IndexStore, "save_to_file", MagicMock()
-    ), patch(
-        "hive_agent.config.Config.get", return_value="gpt-3.5-turbo"  # Default value for initialization
     ):
 
         test_agent = HiveAgent(
@@ -44,6 +44,8 @@ def agent():
             required_exts=[".txt"],
             retrieval_tool="basic",
             load_index_file=False,
+            sdk_context=SDKContext(config_path="./hive_config_test.toml")
+
         )
     return test_agent
 
@@ -91,7 +93,7 @@ def test_server_setup_exception(agent):
 
 
 def test_openai_agent_initialization_exception(agent):
-    with patch("hive_agent.agent.OpenAIAgent.from_tools") as mock_from_tools:
+    with patch("hive_agent.llms.openai.OpenAIAgent.from_tools") as mock_from_tools:
         mock_from_tools.side_effect = Exception("Failed to initialize OpenAI agent")
         with pytest.raises(Exception):
             agent._HiveAgent__setup()
@@ -129,7 +131,7 @@ def test_recreate_agent(agent):
         mock_vectorstore_object = MagicMock()
         mock_from_objects.return_value = mock_vectorstore_object
 
-        agent.recreate_agent()
+        agent.init_agent()
 
         mock_tools_from_funcs.assert_any_call(agent.functions)
         mock_tools_from_funcs.assert_any_call([get_db_schemas, text_2_sql])

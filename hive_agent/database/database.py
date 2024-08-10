@@ -4,11 +4,13 @@ import logging
 
 from typing import Dict, Any, Optional, List
 
-from sqlalchemy import Column, Integer, String, MetaData, Table, select, text, JSON
+from sqlalchemy import Column, Integer, String, MetaData, Table, select, text, JSON, Boolean, DateTime
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.sql.elements import TextClause
+
 
 # TODO: get log level from config
 logging.basicConfig(level=logging.INFO)
@@ -69,6 +71,11 @@ class DatabaseManager:
     async def create_table(self, table_name: str, columns: Dict[str, str]):
         logger.info(f"Creating table {table_name} with columns {columns}")
         try:
+            existing_table = await self.get_table_definition(table_name)
+            if existing_table:
+                logger.info(f"Table {table_name} already exists. Skipping creation.")
+                return
+            
             if not isinstance(columns, dict):
                 raise ValueError("columns must be a dictionary")
 
@@ -104,6 +111,11 @@ class DatabaseManager:
                 select(TableDefinition).filter_by(table_name=table_name)
             )
             table_definition = result.scalars().first()
+
+            # while running test
+            # scalars_result = await result.scalars()
+            # table_definition = await scalars_result.first()
+
             if table_definition:
                 logger.info(
                     f"Table definition for {table_name} retrieved successfully."
@@ -320,3 +332,20 @@ class DatabaseManager:
                 f"Error deleting data from table {table_name} for id {row_id}: {str(e)}"
             )
             raise ValueError(f"Error deleting data: {str(e)}")
+
+    async def execute(self, query, params: dict = None):
+        """
+        Execute a raw SQL query with optional parameters.
+
+        :param query: The raw SQL query to be executed.
+        :param params: Optional parameters for the query.
+        :return: The result of the query execution.
+        """
+        try:
+            if not isinstance(query, TextClause):  # Check if query is not already wrapped
+                query = text(query)
+            result = await self.db.execute(query, params)
+            return result
+        except SQLAlchemyError as e:
+            logger.error(f"Error executing query: {str(e)}")
+            raise ValueError(f"Error executing query: {str(e)}")

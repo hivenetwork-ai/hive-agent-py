@@ -33,7 +33,3 @@ class Config:
         """Saves the current configuration state to disk."""
         with open(self.config_path, "w") as f:
             toml.dump(self.config, f)
-
-    def get_log_level(self):
-        HIVE_AGENT_LOG_LEVEL = os.getenv("HIVE_AGENT_LOG_LEVEL", "INFO").upper()
-        return getattr(logging, HIVE_AGENT_LOG_LEVEL, logging.INFO)
