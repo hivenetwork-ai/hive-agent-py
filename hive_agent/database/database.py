@@ -112,10 +112,6 @@ class DatabaseManager:
             )
             table_definition = result.scalars().first()
 
-            # while running test
-            # scalars_result = await result.scalars()
-            # table_definition = await scalars_result.first()
-
             if table_definition:
                 logger.info(
                     f"Table definition for {table_name} retrieved successfully."
