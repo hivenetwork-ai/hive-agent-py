@@ -37,25 +37,26 @@ def test_set_config(sdk_context):
     assert sdk_context.agent_configs["test_agent"]["model"] == "new_model"
 
 def test_add_agent_resource(sdk_context):
+    with patch('hive_agent.HiveAgent'
+    ), patch("llama_index.core.objects.ObjectIndex.from_objects"):
+        mock_agent = HiveAgent(
+            name="TestAgent",
+            host="localhost",
+            port=8000,
+            instruction="Test instruction",
+            role="Test role",
+            retrieve=False,
+            required_exts=["ext1", "ext2"],
+            retrieval_tool=MagicMock(),
+            load_index_file=False,
+            functions=[],
+            sdk_context=sdk_context
+        )
 
-    mock_agent = HiveAgent(
-        name="TestAgent",
-        host="localhost",
-        port=8000,
-        instruction="Test instruction",
-        role="Test role",
-        retrieve=False,
-        required_exts=["ext1", "ext2"],
-        retrieval_tool=MagicMock(),
-        load_index_file=False,
-        functions=[],
-        sdk_context=sdk_context
-    )
-
-    sdk_context.add_resource(mock_agent, resource_type="agent")    
-    assert "TestAgent" in sdk_context.resources
-    resource = sdk_context.resources["TestAgent"]["object"]
-    assert resource.name == "TestAgent"
+        sdk_context.add_resource(mock_agent, resource_type="agent")    
+        assert "TestAgent" in sdk_context.resources
+        resource = sdk_context.resources["TestAgent"]["object"]
+        assert resource.name == "TestAgent"
 
 
 def test_add_tool_resource(sdk_context):

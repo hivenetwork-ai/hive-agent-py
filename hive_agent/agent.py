@@ -44,6 +44,19 @@ class HiveAgent:
     wallet_store: "WalletStore"
     __agent: Any
 
+    _instance = None
+
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = super(HiveAgent, cls).__new__(cls)
+        return cls._instance
+    
+    @classmethod
+    def get_instance(cls, *args, **kwargs):
+        if not cls._instance:
+            cls(*args, **kwargs)
+        return cls._instance
+    
     def __init__(
         self,
         name: str,
@@ -239,7 +252,7 @@ class HiveAgent:
         tools = self.get_tools()
         tool_retriever = None
 
-        if self.load_index_file or self.retrieve:
+        if self.load_index_file or self.retrieve or len(self.index_store.list_indexes()) > 0:
             index_store = IndexStore.get_instance()
 
             vectorstore_object = ObjectIndex.from_objects(
@@ -251,6 +264,9 @@ class HiveAgent:
             self._assign_agent(tools, tool_retriever)
         else:
             self._assign_agent(tools, tool_retriever)
+    
+    def recreate_agent(self):
+        return self.init_agent()
 
     def _assign_agent(self, tools, tool_retriever):
         model = self.config.get("model", "gpt-3.5-turbo")

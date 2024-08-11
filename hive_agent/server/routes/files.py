@@ -2,7 +2,6 @@ from fastapi import APIRouter, UploadFile, File, HTTPException
 from typing import List
 import logging
 from hive_agent.filestore import FileStore, BASE_DIR
-
 # TODO: get log level from config
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -44,6 +43,8 @@ def setup_files_routes(router: APIRouter):
                 )
 
             try:
+                from hive_agent import HiveAgent
+                hive_agent = HiveAgent.get_instance()
                 filename = await file_store.save_file(file)
                 saved_files.append(filename)
 
@@ -55,6 +56,7 @@ def setup_files_routes(router: APIRouter):
                     logger.info("Inserting data to existing basic index")
                     logger.info(f"Index: {index_store.list_indexes()}")
                     index_store.save_to_file()
+                    hive_agent.recreate_agent()
 
                 else:
                     retriever = RetrieverBase()
@@ -64,6 +66,7 @@ def setup_files_routes(router: APIRouter):
                     index_store.add_index(retriever.name, index)
                     logger.info("Inserting data to new basic index")
                     logger.info(f"Index: {index_store.list_indexes()}")
+                    hive_agent.recreate_agent()
                     index_store.save_to_file()
 
             except ValueError as e:
