@@ -4,12 +4,13 @@ from llama_index.core.agent import AgentRunner
 class LLM:
     agent: AgentRunner
 
-    def __init__(self, tools=None, instruction="", tool_retriever=None):
-        self.tools = tools
+    def __init__(self, llm=None, tools=None, instruction="", tool_retriever=None):
+        self.llm = llm
+        self.tools = tools if tools is not None else []
         self.tool_retriever = tool_retriever
         self.instruction = instruction
         self.system_prompt = f"""You are a domain-specific assistant that is helpful, respectful and honest. Always 
-                answer as helpfuly as possible, while being safe. Your answers should not include any harmful, 
+                answer as helpfully as possible, while being safe. Your answers should not include any harmful, 
                 unethical, racist, sexist, toxic, dangerous, or illegal content. Please ensure that your responses are 
                 socially unbiased and positive in nature. If a question does not make any sense, or is not factually 
                 coherent, explain why instead of answering something not correct. If you don't know the answer to a 

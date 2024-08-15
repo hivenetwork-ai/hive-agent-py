@@ -16,9 +16,9 @@ from llama_index.core.settings import Settings
 
 from hive_agent.chat import ChatManager
 from hive_agent.config import Config
-from hive_agent.database.database import DatabaseManager, get_db
+from hive_agent.database.database import DatabaseManager, get_db, initialize_db, setup_chats_table
 from hive_agent.llms import LLM, OpenAILLM, ClaudeLLM, MistralLLM, OllamaLLM
-from hive_agent.llms.utils import init_llm_settings, llm_from_wrapper
+from hive_agent.llms.utils import init_llm_settings, llm_from_config
 from hive_agent.server.routes import setup_routes, files
 from hive_agent.tools.agent_db import get_db_schemas, text_2_sql
 from hive_agent.utils import tools_from_funcs
@@ -98,8 +98,8 @@ class HiveAgent:
             self.__optional_dependencies["web3"] = False
 
     def __setup(self):
-        init_llm_settings(self.__config)
-        print(f"inside agent {self.name}, Settings.llm is {Settings.llm}")
+        # init_llm_settings(self.__config)
+        # print(f"inside agent {self.name}, Settings.llm is {Settings.llm}")
         custom_tools = tools_from_funcs(funcs=self.functions)
 
         # TODO: pass db client to db tools directly
@@ -165,6 +165,7 @@ class HiveAgent:
             tool_retriever = vectorstore_object.as_retriever(similarity_top_k=3)
             tools = []  # Cannot specify both tools and tool_retriever
 
+        print(f"agent {self.name} uses tools: {tools}")
         if self.__llm is not None:
             print(f"using provided llm: {type(self.__llm)}")
             # self.__agent = llm_from_wrapper(self.__llm, self.__config)
@@ -173,16 +174,17 @@ class HiveAgent:
             # self.__agent = get_llm(self.__config)
 
             model = self.__config.get("model", "name", "gpt-3.5-turbo")
+            llm = llm_from_config(self.__config)
             if "gpt" in model:
-                self.__agent = OpenAILLM(tools, self.instruction, tool_retriever).agent
+                self.__agent = OpenAILLM(llm, tools, self.instruction, tool_retriever).agent
             elif "claude" in model:
-                self.__agent = ClaudeLLM(tools, self.instruction, tool_retriever).agent
+                self.__agent = ClaudeLLM(llm, tools, self.instruction, tool_retriever).agent
             elif "llama" in model:
-                self.__agent = OllamaLLM(tools, self.instruction, tool_retriever).agent
+                self.__agent = OllamaLLM(llm, tools, self.instruction, tool_retriever).agent
             elif "mixtral" or "mistral" or "codestral" in model:
-                self.__agent = MistralLLM(tools, self.instruction, tool_retriever).agent
+                self.__agent = MistralLLM(llm, tools, self.instruction, tool_retriever).agent
             else:
-                self.__agent = OpenAILLM(tools, self.instruction, tool_retriever).agent
+                self.__agent = OpenAILLM(llm, tools, self.instruction, tool_retriever).agent
 
         if self.__optional_dependencies.get("web3"):
             from hive_agent.wallet import WalletStore
@@ -194,6 +196,14 @@ class HiveAgent:
             self.logger.warning(
                 "'web3' extras not installed. Web3-related functionality will not be available."
             )
+
+        # asyncio.run(self._setup_db())
+
+    async def _setup_db(self):
+        await initialize_db()
+
+        async for db in get_db():
+            await setup_chats_table(db)
 
     def __setup_server(self):
 
@@ -256,7 +266,7 @@ class HiveAgent:
         db_manager = DatabaseManager(db=get_db())
         sender_role = MessageRole.USER
 
-        if role.lower() == "agent":
+        if role is not None and "agent" in role.lower():
             sender_role = MessageRole.ASSISTANT
 
         last_message = ChatMessage(role=sender_role, content=prompt)

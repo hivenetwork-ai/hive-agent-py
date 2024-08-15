@@ -29,7 +29,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-def _create_llm(llm_type: str, config: Optional[Config]):
+def _create_llm(llm_type: str, config: Config):
     timeout = (
         config.get("timeout", "llm", DEFAULT_LLM_TIMEOUT)
         if config
@@ -73,7 +73,7 @@ def llm_from_wrapper(llm_wrapper: LLM, config: Optional[Config]):
         raise ValueError("Unsupported LLM wrapper type")
 
 
-def _get_llm(config: Optional[Config]):
+def llm_from_config(config: Config):
     model = config.get("model", "name", "gpt-3.5-turbo")
 
     if "gpt" in model:
@@ -94,7 +94,7 @@ def _get_llm(config: Optional[Config]):
 
 
 def init_llm_settings(config: Config):
-    Settings.llm = _get_llm(config)
+    Settings.llm = llm_from_config(config)
     Settings.chunk_size = 1024
     Settings.chunk_overlap = 20
     logger.info("LLM settings initialized")
