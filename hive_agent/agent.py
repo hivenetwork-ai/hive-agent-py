@@ -11,7 +11,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from llama_index.agent.openai import OpenAIAgent  # type: ignore   # noqa
-from llama_index.core.agent import FunctionCallingAgentWorker  # noqa
+from llama_index.core.agent import FunctionCallingAgentWorker, AgentRunner  # noqa
 
 from hive_agent.llms import OpenAIMultiModalLLM, OpenAILLM, ClaudeLLM, MistralLLM, OllamaLLM
 
@@ -42,7 +42,7 @@ class HiveAgent:
         from hive_agent.wallet import WalletStore
 
     wallet_store: "WalletStore"
-    __agent: Any
+    __agent: AgentRunner
 
     def __init__(
         self,
@@ -266,3 +266,8 @@ class HiveAgent:
             agent_class = OpenAILLM
 
         self.__agent = agent_class(tools, self.instruction, tool_retriever).agent
+
+    def add_tool(self, function_tool):
+        new_tool = self._tools_from_funcs([function_tool])
+        self.functions.append(new_tool)
+        self.recreate_agent()

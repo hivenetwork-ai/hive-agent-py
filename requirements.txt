@@ -3,9 +3,9 @@ uvicorn==0.23.2
 python-dotenv==1.0.1
 toml==0.10.2
 llama-index==0.10.59
-web3==6.15.1
-py-solc-x==2.0.2
-eth-account==0.11.0
+web3==7.2.0
+py-solc-x==2.0.3
+eth-account==0.13.3
 SQLAlchemy==2.0.29
 aiosqlite==0.20.0
 python-multipart==0.0.9
