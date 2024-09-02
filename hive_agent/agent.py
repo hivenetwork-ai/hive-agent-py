@@ -27,7 +27,9 @@ from hive_agent.tools.retriever.base_retrieve import RetrieverBase, IndexStore, 
 from hive_agent.tools.retriever.chroma_retrieve import ChromaRetriever
 from hive_agent.tools.retriever.pinecone_retrieve import PineconeRetriever
 from llama_index.core.objects import ObjectIndex
+from llama_index.core.tools import QueryEngineTool, ToolMetadata
 
+import uuid
 from dotenv import load_dotenv
 from hive_agent.sdk_context import SDKContext
 
@@ -44,24 +46,11 @@ class HiveAgent:
     wallet_store: "WalletStore"
     __agent: Any
 
-    _instance = None
-
-    def __new__(cls, *args, **kwargs):
-        if cls._instance is None:
-            cls._instance = super(HiveAgent, cls).__new__(cls)
-        return cls._instance
-    
-    @classmethod
-    def get_instance(cls, *args, **kwargs):
-        if not cls._instance:
-            cls(*args, **kwargs)
-        return cls._instance
-    
     def __init__(
         self,
         name: str,
         functions: List[Callable],
-        config_path="../../hive_config_example.toml",
+        config_path="./hive_config_example.toml",
         host="0.0.0.0",
         port=8000,
         instruction="",
@@ -72,6 +61,7 @@ class HiveAgent:
         load_index_file=False,
         sdk_context: Optional[SDKContext] = None
     ):
+        self.id = uuid.uuid4()
         self.name = name
         self.functions = functions
         self.config_path = config_path
@@ -97,6 +87,8 @@ class HiveAgent:
 
         self._check_optional_dependencies()
         self.__setup()
+
+        self.sdk_context.add_resource(self, resource_type="agent")
 
     def _check_optional_dependencies(self):
         try:
@@ -138,7 +130,7 @@ class HiveAgent:
     def __setup_server(self):
 
         self.configure_cors()
-        setup_routes(self.app, self.__agent)
+        setup_routes(self.app, self.id, self.sdk_context)
 
         signal.signal(signal.SIGINT, self.__signal_handler)
         signal.signal(signal.SIGTERM, self.__signal_handler)
@@ -216,23 +208,23 @@ class HiveAgent:
     
         if "basic" in self.retrieval_tool:
             retriever = RetrieverBase()
-            index = retriever.create_basic_index()
-            self.index_store.add_index(retriever.name, index)
+            index,file_names = retriever.create_basic_index()
+            self.index_store.add_index(retriever.name, index, file_names)
 
         if "chroma" in self.retrieval_tool:
             chroma_retriever = ChromaRetriever()
-            index = chroma_retriever.create_index()
-            self.index_store.add_index(chroma_retriever.name, index)
+            index,file_names = chroma_retriever.create_index()
+            self.index_store.add_index(chroma_retriever.name, index, file_names)
 
         if "pinecone-serverless" in self.retrieval_tool:
             pinecone_retriever = PineconeRetriever()
-            index = pinecone_retriever.create_serverless_index()
-            self.index_store.add_index(pinecone_retriever.name, index)
+            index,file_names = pinecone_retriever.create_serverless_index()
+            self.index_store.add_index(pinecone_retriever.name, index, file_names)
 
         if "pinecone-pod" in self.retrieval_tool:
             pinecone_retriever = PineconeRetriever()
-            index = pinecone_retriever.create_pod_index()
-            self.index_store.add_index(pinecone_retriever.name, index)
+            index,file_names = pinecone_retriever.create_pod_index()
+            self.index_store.add_index(pinecone_retriever.name, index, file_names)
 
             self.index_store.save_to_file()
 
@@ -248,12 +240,24 @@ class HiveAgent:
         return tools
 
     def init_agent(self):
-        
+
         tools = self.get_tools()
         tool_retriever = None
 
         if self.load_index_file or self.retrieve or len(self.index_store.list_indexes()) > 0:
             index_store = IndexStore.get_instance()
+            query_engine_tools = []
+            for index_name in index_store.get_all_index_names():
+                index_files = index_store.get_index_files(index_name)
+                query_engine_tools.append(
+                    QueryEngineTool(
+                        query_engine = index_store.get_index(index_name).as_query_engine(),
+                        metadata=ToolMetadata(name=index_name+'_tool',
+                                              description=("Useful for questions related to specific aspects of documents"
+                                              f" {index_files}")
+                                                                                                            )))
+            
+            tools = tools + query_engine_tools
 
             vectorstore_object = ObjectIndex.from_objects(
                 tools,
@@ -284,4 +288,11 @@ class HiveAgent:
         else:
             agent_class = OpenAILLM
 
+        self.sdk_context.set_attributes(
+            id=self.id,
+            tools=tools,
+            tool_retriever=tool_retriever,
+            agent_class=agent_class,
+            instruction=self.instruction
+        )
         self.__agent = agent_class(tools, self.instruction, tool_retriever).agent

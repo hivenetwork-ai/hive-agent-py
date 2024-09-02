@@ -19,7 +19,7 @@ class ChromaRetriever(RetrieverBase):
     def create_index(
         self, file_path=None, folder_path=None, collection_name="hive_agent_chroma"
     ):
-        documents = self._load_documents(file_path, folder_path)
+        documents, file_names = self._load_documents(file_path, folder_path)
 
         chroma_client = chromadb.PersistentClient(path=self.base_dir)
         chroma_collection = chroma_client.get_or_create_collection(collection_name)
@@ -29,7 +29,7 @@ class ChromaRetriever(RetrieverBase):
         index = VectorStoreIndex.from_documents(
             documents, storage_context=storage_context
         )
-        return index
+        return index, file_names
 
     def delete_collection(self, collection_name="hive_agent_chroma"):
         chroma_client = chromadb.PersistentClient(path=self.base_dir)

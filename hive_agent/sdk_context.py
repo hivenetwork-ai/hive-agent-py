@@ -12,7 +12,7 @@ class SDKContext:
     This includes configuration settings, resources, and utilities.
     """
 
-    def __init__(self, config_path="../../hive_config_example.toml"):
+    def __init__(self, config_path=str):
         """
         Initialize the SDKContext with a path to a TOML configuration file.
 
@@ -24,6 +24,7 @@ class SDKContext:
         self.resources = {}
         self.resources_info = {}
         self.utilities = {}
+        self.attributes = {}
 
     def load_default_config(self):
         """
@@ -103,6 +104,7 @@ class SDKContext:
 
         if isinstance(resource, HiveAgent) and resource_type == "agent":
             resource_info = {
+                "id": resource.id,
                 "name": resource.name,
                 "type": resource_type,
                 "host": resource.host,
@@ -115,7 +117,7 @@ class SDKContext:
                 "load_index_file": resource.load_index_file,
                 "functions": [{"module": func.__module__, "name": func.__name__} for func in resource.functions]
             }
-            self.resources[resource.name] = {
+            self.resources[resource.id] = {
                 "init_params": resource_info,
                 "object": resource
             }
@@ -137,14 +139,14 @@ class SDKContext:
         else:
             raise ValueError("Unsupported resource type")
 
-    def get_resource(self, name: str):
+    def get_resource(self, key: str):
         """
         Retrieve a resource from the context.
 
         :param name: Name of the resource.
         :return: The requested resource.
         """
-        resource = self.resources.get(name)
+        resource = self.resources.get(key)
         return resource.get("object") if isinstance(resource, dict) else resource
 
     def add_resource_info(self, resource_info: dict):
@@ -249,53 +251,6 @@ class SDKContext:
     async def initialize_database(self):
         await initialize_db()
 
-    async def setup_seperate_tables_and_insert_data(self):
-        await self.initialize_database()
-
-        async for db in get_db():
-            db_manager = DatabaseManager(db)
-
-            # Create and insert default_config data
-            await db_manager.create_table('default_config', {key: 'String' for key in self.default_config})
-            await db_manager.insert_data('default_config', self.default_config)
-
-            # Create and insert agent_configs data in a single table
-            agent_columns = {
-                'agent_name': 'String',
-                'model': 'String',
-                'environment': 'String',
-                'timeout': 'Integer',
-                'log': 'String',
-                'create_date': 'DateTime'
-            }
-            await db_manager.create_table('agent_configs', agent_columns)
-            for agent_name, config in self.agent_configs.items():
-                config_data = {'agent_name': agent_name, **config,'create_date': datetime.now()}
-                await db_manager.insert_data('agent_configs', config_data)
-
-            # Create and insert resources data in a single table
-            resource_columns = {
-                'resource_name': 'String',
-                'name': 'String',
-                'type': 'String',
-                'host': 'String',
-                'port': 'Integer',
-                'instruction': 'String',
-                'role': 'String',
-                'retrieve': 'Boolean',
-                'required_exts': 'JSON',
-                'retrieval_tool': 'String',
-                'load_index_file': 'Boolean',
-                'functions': 'JSON',
-                'create_date': 'DateTime'
-            }
-            await db_manager.create_table('resources', resource_columns)
-            for resource_name, details in self.resources.items():
-                details_data = {k: v for k, v in details['init_params'].items() if k in resource_columns}
-                details_data['resource_name'] = resource_name
-                details_data['create_date'] = datetime.now() 
-                await db_manager.insert_data('resources', details_data)
-
     async def save_sdk_context_to_db(self):
         await self.initialize_database()
 
@@ -363,3 +318,27 @@ class SDKContext:
                 self.restore_non_serializable_objects()
                 return self
             
+    def set_attributes(self, id ,**kwargs):
+        """
+        Set multiple attributes of the SDKContext at once.
+        
+        :param kwargs: Keyword arguments for attributes to set.
+        """
+        valid_attributes = ['tools', 'tool_retriever', 'agent_class', 'instruction']
+        if id not in self.attributes:
+            self.attributes[id] = {}
+        for attr, value in kwargs.items():
+            if attr in valid_attributes:
+                self.attributes[id][attr] = value
+            else:
+                print(f"Warning: '{attr}' is not a valid attribute and was ignored.")
+
+    def get_attributes(self, id, *args):
+        """
+        Get multiple attributes of the SDKContext at once.
+        
+        :param args: Names of attributes to retrieve.
+        :return: A dictionary of requested attributes and their values.
+        """
+        valid_attributes = ['tools', 'tool_retriever', 'agent_class', 'instruction']
+        return {attr: self.attributes[id].get(attr) for attr in args if attr in valid_attributes}

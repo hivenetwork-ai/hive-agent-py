@@ -12,13 +12,14 @@ from hive_agent.chat.schemas import ChatHistorySchema, ChatRequest, ChatData
 from llama_index.core.llms import ChatMessage, MessageRole
 from llama_index.agent.openai import OpenAIAgent  # type: ignore
 from hive_agent.filestore import FileStore, BASE_DIR
+from hive_agent.sdk_context import SDKContext
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 file_store = FileStore(BASE_DIR)
 
 
-def setup_chat_routes(router: APIRouter, llm_instance):
+def setup_chat_routes(router: APIRouter, id,sdk_context: SDKContext):
     async def validate_chat_data(chat_data):
         if len(chat_data.messages) == 0:
             raise HTTPException(
@@ -66,6 +67,9 @@ def setup_chat_routes(router: APIRouter, llm_instance):
         chat_request: ChatRequest,
         db: AsyncSession = Depends(get_db),
     ):
+        attributes = sdk_context.get_attributes(id, 'agent_class', 'tools', 'instruction', 'tool_retriever')
+        llm_instance = attributes['agent_class'](attributes['tools'], attributes['instruction'], attributes['tool_retriever']).agent
+
         chat_manager = ChatManager(llm_instance, user_id=chat_request.user_id, session_id=chat_request.session_id)
         db_manager = DatabaseManager(db)
 
@@ -108,6 +112,8 @@ def setup_chat_routes(router: APIRouter, llm_instance):
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="No files provided",
             )
+        attributes = sdk_context.get_attributes(id, 'agent_class', 'tools', 'instruction', 'tool_retriever')
+        llm_instance = attributes['agent_class'](attributes['tools'], attributes['instruction'], attributes['tool_retriever']).agent
 
         chat_manager = ChatManager(llm_instance, user_id=user_id, session_id=session_id)
         db_manager = DatabaseManager(db)
@@ -131,6 +137,9 @@ def setup_chat_routes(router: APIRouter, llm_instance):
         session_id: str = Query(...),
         db: AsyncSession = Depends(get_db),
     ):
+        attributes = sdk_context.get_attributes(id, 'agent_class', 'tools', 'instruction', 'tool_retriever')
+        llm_instance = attributes['agent_class'](attributes['tools'], attributes['instruction'], attributes['tool_retriever']).agent
+
         chat_manager = ChatManager(llm_instance, user_id=user_id, session_id=session_id)
         db_manager = DatabaseManager(db)
         chat_history = await chat_manager.get_messages(db_manager)
@@ -153,6 +162,9 @@ def setup_chat_routes(router: APIRouter, llm_instance):
 
     @router.get("/all_chats")
     async def get_all_chats(user_id: str = Query(...), db: AsyncSession = Depends(get_db)):
+        attributes = sdk_context.get_attributes(id, 'agent_class', 'tools', 'instruction', 'tool_retriever')
+        llm_instance = attributes['agent_class'](attributes['tools'], attributes['instruction'], attributes['tool_retriever']).agent
+
         chat_manager = ChatManager(llm_instance, user_id=user_id, session_id="")
         db_manager = DatabaseManager(db)
         all_chats = await chat_manager.get_all_chats_for_user(db_manager)

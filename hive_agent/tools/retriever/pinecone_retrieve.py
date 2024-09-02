@@ -29,7 +29,7 @@ class PineconeRetriever(RetrieverBase):
         cloud="aws",
         region="us-east-1",
     ):
-        documents = self._load_documents(file_path, folder_path)
+        documents, file_names = self._load_documents(file_path, folder_path)
         self.pinecone_client.create_index(
             name=name,
             dimension=dimension,
@@ -43,7 +43,7 @@ class PineconeRetriever(RetrieverBase):
         index = VectorStoreIndex.from_documents(
             documents, storage_context=storage_context
         )
-        return index
+        return index, file_names
 
     def create_pod_index(
         self,
@@ -56,7 +56,7 @@ class PineconeRetriever(RetrieverBase):
         pod_type="p1.x1",
         pods=1,
     ):
-        documents = self._load_documents(file_path, folder_path)
+        documents, file_names = self._load_documents(file_path, folder_path)
         self.pinecone_client.create_index(
             name=name,
             dimension=dimension,
@@ -70,7 +70,7 @@ class PineconeRetriever(RetrieverBase):
         index = VectorStoreIndex.from_documents(
             documents, storage_context=storage_context
         )
-        return index
+        return index, file_names
 
     def delete_index(self, index_name):
         self.pinecone_client.delete_index(index_name)
