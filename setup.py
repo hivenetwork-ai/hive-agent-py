@@ -22,7 +22,7 @@ setup(
         "llama-index-multi-modal-llms-openai==0.1.8"
     ],
     extras_require={
-        "web3": ["web3==6.15.1", "py-solc-x==2.0.2", "eth-account==0.11.0"],
+        "web3": ["web3==7.2.0", "py-solc-x==2.0.3", "eth-account==0.13.3"],
     },
     python_requires=">=3.11",
 )
