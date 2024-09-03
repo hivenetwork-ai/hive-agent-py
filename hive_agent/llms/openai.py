@@ -24,5 +24,5 @@ class OpenAIMultiModalLLM(LLM):
             system_prompt=self.system_prompt,
             tool_retriever=self.tool_retriever,
             # llm=self.llm,
-            multi_modal_llm=self.llm, # Settings.llm,
+            multi_modal_llm=self.llm, 
         ).as_agent()

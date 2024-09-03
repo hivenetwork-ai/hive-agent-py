@@ -11,7 +11,7 @@ class MistralLLM(LLM):
         self.agent = FunctionCallingAgentWorker.from_tools(
             tools=self.tools,
             system_prompt=self.system_prompt,
-            llm=llm, # Settings.llm,
+            llm=llm, 
             allow_parallel_tool_calls=False,
             tool_retriever=self.tool_retriever,
         ).as_agent()

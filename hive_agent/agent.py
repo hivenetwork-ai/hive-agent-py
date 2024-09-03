@@ -113,7 +113,6 @@ class HiveAgent:
         return False
 
     def __setup(self):
-        # init_llm_settings(self.__config)
         custom_tools = tools_from_funcs(self.functions)
 
         # TODO: pass db client to db tools directly
@@ -269,7 +268,6 @@ class HiveAgent:
     def _assign_agent(self, tools, tool_retriever):
         if self.__llm is not None:
             print(f"using provided llm: {type(self.__llm)}")
-            # self.__agent = llm_from_wrapper(self.__llm, self.__config)
             self.__agent = self.__llm.agent
         else:
             model = self.__config.get("model", "model", "gpt-3.5-turbo")

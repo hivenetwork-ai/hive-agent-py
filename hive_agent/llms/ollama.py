@@ -10,7 +10,7 @@ class OllamaLLM(LLM):
         self.agent = ReActAgentWorker.from_tools(
             tools=self.tools,
             system_prompt=self.system_prompt,
-            llm=llm, # Settings.llm,
+            llm=llm, 
             verbose=True,
             tool_retriever=self.tool_retriever,
         ).as_agent()

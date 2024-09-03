@@ -45,7 +45,6 @@ class HiveSwarm:
         self.__llm = llm
         self.config = Config(config_path=config_path)
         self.functions = functions
-        # init_llm_settings(self.config)
 
         if agents:
             for agent in agents:
