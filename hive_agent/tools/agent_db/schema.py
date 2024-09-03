@@ -1,7 +1,7 @@
 from sqlalchemy import create_engine, MetaData
+from hive_agent.sdk_context import SDKContext
 
-
-def get_db_schemas(db_url: str):
+def get_db_schemas(sdkcontext : SDKContext):
     """
     Connect to the database specified by db_url, reflect its schema,
     and return a dictionary mapping table names to their schema definitions.
@@ -11,10 +11,11 @@ def get_db_schemas(db_url: str):
              containing column details such as name, type, primary key status, and nullable status.
     """
 
-    engine = create_engine(db_url)
-    metadata = MetaData()
+    engine = sdkcontext.get_utility('text2sql_engine')
+    metadata = sdkcontext.get_utility('text2sql_metadata')
+    # metadata = MetaData()
 
-    metadata.reflect(engine)
+    # metadata.reflect(engine)
 
     schemas = {}
     for table_name, table in metadata.tables.items():

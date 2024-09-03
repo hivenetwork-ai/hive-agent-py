@@ -231,9 +231,19 @@ class HiveAgent:
     def get_tools(self):
 
         custom_tools = self._tools_from_funcs(self.functions)
+        
+        self.sdk_context.load_default_utility()
 
-        # TODO: pass db client to db tools directly
-        system_tools = self._tools_from_funcs([get_db_schemas, text_2_sql])
+        def _text_2_sql(query: str):
+            return text_2_sql(self.sdk_context, query)
+        
+        def _get_db_schemas():
+            return get_db_schemas(self.sdk_context)
+        
+        system_tools = self._tools_from_funcs([
+            _text_2_sql,
+            _get_db_schemas
+        ])
 
         tools = custom_tools + system_tools
 

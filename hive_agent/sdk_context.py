@@ -2,9 +2,10 @@ import json
 from typing import Any
 from hive_agent.config import Config
 import importlib
-from hive_agent.database.database import initialize_db, get_db, DatabaseManager
+from hive_agent.database.database import initialize_db, get_db, DatabaseManager, db_url
 from datetime import datetime
 from sqlalchemy.sql import text as sql_text
+from sqlalchemy import create_engine,MetaData
 
 class SDKContext:
     """
@@ -342,3 +343,51 @@ class SDKContext:
         """
         valid_attributes = ['tools', 'tool_retriever', 'agent_class', 'instruction']
         return {attr: self.attributes[id].get(attr) for attr in args if attr in valid_attributes}
+
+    def add_utility(self, utility, utility_type: str, name: str):
+        """
+        Add a utility to the context.
+
+        :param utility: The utility to be added.
+        :param util_type: The type of the utility.
+        :param name: The name of the utility.
+        """
+        utility_info = {
+            "name": name,
+            "type": utility_type
+        }
+
+        # Add type-specific information
+        if hasattr(utility, 'url'):
+            utility_info["url"] = utility.url
+        
+        self.utilities[name] = {
+            "info": utility_info,
+            "object": utility
+        }
+
+    def get_utility(self, name: str):
+        """
+        Retrieve a utility function from the context.
+
+        :param name: Name of the utility function.
+        :return: The requested utility function.
+        """
+        utility = self.utilities.get(name)
+        if utility is None:
+            return None
+        return utility["object"]
+
+    def load_default_utility(self):
+        """
+        Load the default utility function from the context.
+
+        :return: The requested utility function.
+        """
+
+        if self.get_utility("text2sql_engine") is None:
+            engine = create_engine(db_url.replace("+aiosqlite", ""))
+            metadata = MetaData()
+            metadata.reflect(bind=engine)
+            self.add_utility(engine, utility_type= 'DBEngine', name = 'text2sql_engine')
+            self.add_utility(metadata, utility_type= 'MetaData', name = 'text2sql_metadata')
