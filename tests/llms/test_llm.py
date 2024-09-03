@@ -2,13 +2,17 @@ import pytest
 from unittest.mock import patch
 import llama_index
 from llama_index.agent.openai import OpenAIAgent  # type: ignore
-from hive_agent.llms import OpenAILLM
-from hive_agent.llms import OpenAIMultiModalLLM
-from hive_agent.llms import ClaudeLLM
-from hive_agent.llms import MistralLLM
-from hive_agent.llms import OllamaLLM
+from hive_agent.llms.openai import OpenAILLM, OpenAIMultiModalLLM
+from hive_agent.llms.claude import ClaudeLLM
+from hive_agent.llms.mistral import MistralLLM
+from hive_agent.llms.ollama import OllamaLLM
 
 from llama_index.core.objects import ObjectIndex
+from llama_index.llms.openai import OpenAI
+from llama_index.llms.anthropic import Anthropic
+from llama_index.llms.ollama import Ollama
+from llama_index.llms.mistralai import MistralAI
+from llama_index.multi_modal_llms.openai import OpenAIMultiModal
 
 
 @pytest.fixture
@@ -45,7 +49,7 @@ def tool_retriever(tools):
 
 
 def test_openai_llm_initialization(tools, instruction):
-    openai_llm = OpenAILLM(tools, instruction)
+    openai_llm = OpenAILLM(OpenAI(model="gpt-3.5-turbo"), tools, instruction)
     assert openai_llm.agent is not None
     assert isinstance(openai_llm.agent, OpenAIAgent)
     assert openai_llm.tools == tools
@@ -53,7 +57,7 @@ def test_openai_llm_initialization(tools, instruction):
 
 
 def test_openai_multimodal_llm_initialization(tools, instruction):
-    openai_llm = OpenAIMultiModalLLM(tools, instruction)
+    openai_llm = OpenAIMultiModalLLM(OpenAIMultiModal(model="gpt-4"), tools, instruction)
     assert openai_llm.agent is not None
     assert isinstance(openai_llm.agent, llama_index.core.agent.runner.base.AgentRunner)
     assert openai_llm.tools == tools
@@ -61,7 +65,7 @@ def test_openai_multimodal_llm_initialization(tools, instruction):
 
 
 def test_claude_llm_initialization(tools, instruction):
-    claude_llm = ClaudeLLM(tools, instruction)
+    claude_llm = ClaudeLLM(Anthropic(model="claude-3-opus-20240229"), tools, instruction)
     assert claude_llm.agent is not None
     assert isinstance(claude_llm.agent, llama_index.core.agent.runner.base.AgentRunner)
     assert claude_llm.tools == tools
@@ -69,7 +73,7 @@ def test_claude_llm_initialization(tools, instruction):
 
 
 def test_llama_llm_initialization(tools, instruction):
-    llama_llm = OllamaLLM(tools, instruction)
+    llama_llm = OllamaLLM(Ollama(model="llama3"), tools, instruction)
     assert llama_llm.agent is not None
     assert isinstance(llama_llm.agent, llama_index.core.agent.runner.base.AgentRunner)
     assert llama_llm.tools == tools
@@ -77,7 +81,7 @@ def test_llama_llm_initialization(tools, instruction):
 
 
 def test_mistral_llm_initialization(tools, instruction):
-    mistral_llm = MistralLLM(tools, instruction)
+    mistral_llm = MistralLLM(MistralAI(model="mistral-large-latest", api_key="mistral_api_key"), tools, instruction)
     assert mistral_llm.agent is not None
     assert isinstance(mistral_llm.agent, llama_index.core.agent.runner.base.AgentRunner)
     assert mistral_llm.tools == tools
@@ -85,7 +89,7 @@ def test_mistral_llm_initialization(tools, instruction):
 
 
 def test_retrieval_openai_llm_initialization(empty_tools, instruction, tool_retriever):
-    openai_llm = OpenAILLM(empty_tools, instruction, tool_retriever=tool_retriever)
+    openai_llm = OpenAILLM(OpenAI(model="gpt-3.5-turbo"), empty_tools, instruction, tool_retriever=tool_retriever)
     assert openai_llm.agent is not None
     assert isinstance(openai_llm.agent, OpenAIAgent)
     assert openai_llm.tools == empty_tools
@@ -94,7 +98,7 @@ def test_retrieval_openai_llm_initialization(empty_tools, instruction, tool_retr
 
 
 def test_retrieval_ollamallm_initialization(empty_tools, instruction, tool_retriever):
-    ollamallm = OllamaLLM(empty_tools, instruction, tool_retriever=tool_retriever)
+    ollamallm = OllamaLLM(Ollama(model="llama3"), empty_tools, instruction, tool_retriever=tool_retriever)
     assert ollamallm.agent is not None
     assert isinstance(ollamallm.agent, llama_index.core.agent.runner.base.AgentRunner)
     assert ollamallm.tools == empty_tools
