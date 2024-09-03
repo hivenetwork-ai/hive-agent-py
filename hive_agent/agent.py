@@ -5,7 +5,7 @@ import sys
 import uvicorn
 import os
 
-from typing import Callable, List, Any, Optional, TYPE_CHECKING
+from typing import Callable, List, Optional, TYPE_CHECKING
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -20,7 +20,7 @@ from hive_agent.llms.mistral import MistralLLM
 from hive_agent.llms.ollama import OllamaLLM
 from hive_agent.llms.utils import llm_from_config
 
-from llama_index.core.llms import ChatMessage, MessageRole
+from llama_index.core.llms import ChatMessage
 
 from hive_agent.server.routes import setup_routes, files
 from hive_agent.tools.agent_db import get_db_schemas, text_2_sql
