@@ -172,7 +172,7 @@ class HiveAgent:
             self.wallet_store = None
             self.logger.warning("'web3' extras not installed. Web3-related functionality will not be available.")
 
-        if self.__swarm_mode is True:
+        if self.__swarm_mode is False:
             self.__setup_server()
 
     def __setup_server(self):

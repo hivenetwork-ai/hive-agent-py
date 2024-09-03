@@ -1,4 +1,5 @@
 import logging
+import os
 from datetime import datetime, timezone
 from typing import List, Optional
 
@@ -12,6 +13,8 @@ from hive_agent.chat.schemas import ChatHistorySchema, ChatRequest, ChatData
 from llama_index.core.llms import ChatMessage, MessageRole
 from llama_index.agent.openai import OpenAIAgent  # type: ignore
 from hive_agent.filestore import FileStore, BASE_DIR
+
+from langtrace_python_sdk import inject_additional_attributes
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -77,14 +80,18 @@ def setup_chat_routes(router: APIRouter, llm_instance):
             else []
         )
 
-        return await generate_response_or_stream(
+        return await inject_additional_attributes(lambda: generate_response_or_stream(
             chat_manager,
             db_manager,
             request,
             ChatMessage(role=last_message.role, content=last_message.content),
             messages,
             file_paths,
-        )
+        ), {
+            # "agent_id": os.getenv("HIVE_AGENT_ID", ""),
+            "user_id": chat_request.user_id,
+            # "session_id": chat_request.session_id
+        })
 
     @router.post("/chat_media")
     async def chat_media(
@@ -116,14 +123,18 @@ def setup_chat_routes(router: APIRouter, llm_instance):
 
         file_paths = [f"{BASE_DIR}/{await file_store.save_file(file)}" for file in files]
 
-        return await generate_response_or_stream(
+        return await inject_additional_attributes(lambda: generate_response_or_stream(
             chat_manager,
             db_manager,
             request,
             ChatMessage(role=last_message.role, content=last_message.content),
             messages,
             file_paths,
-        )
+        ), {
+            # "agent_id": os.getenv("HIVE_AGENT_ID", ""),
+            "user_id": user_id,
+            # "session_id": session_id
+        })
 
     @router.get("/chat_history", response_model=List[ChatHistorySchema])
     async def get_chat_history(
