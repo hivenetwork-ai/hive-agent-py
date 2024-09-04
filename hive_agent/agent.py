@@ -1,11 +1,13 @@
 import asyncio
+import importlib.util
 import logging
 import signal
+import subprocess
 import sys
 import uvicorn
 import os
 
-from typing import Callable, List, Optional, TYPE_CHECKING
+from typing import Callable, List, Optional, TYPE_CHECKING, Dict
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -35,7 +37,6 @@ from dotenv import load_dotenv
 from hive_agent.config import Config
 from hive_agent.utils import tools_from_funcs
 
-
 load_dotenv()
 
 
@@ -51,22 +52,22 @@ class HiveAgent:
     __agent: AgentRunner
 
     def __init__(
-        self,
-        name: str,
-        functions: List[Callable],
-        llm: Optional[LLM] = None,
-        config_path="../../hive_config_example.toml",
-        host="0.0.0.0",
-        port=8000,
-        instruction="",
-        role="",
-        description="",
-        agent_id=os.getenv("HIVE_AGENT_ID", ""),
-        retrieve=False,
-        required_exts=supported_exts,
-        retrieval_tool="basic",
-        load_index_file=False,
-        swarm_mode=False,
+            self,
+            name: str,
+            functions: List[Callable],
+            llm: Optional[LLM] = None,
+            config_path="../../hive_config_example.toml",
+            host="0.0.0.0",
+            port=8000,
+            instruction="",
+            role="",
+            description="",
+            agent_id=os.getenv("HIVE_AGENT_ID", ""),
+            retrieve=False,
+            required_exts=supported_exts,
+            retrieval_tool="basic",
+            load_index_file=False,
+            swarm_mode=False,
     ):
         self.__llm = llm
         self.id = agent_id
@@ -291,4 +292,35 @@ class HiveAgent:
 
     def add_tool(self, function_tool):
         self.functions.append(function_tool)
+        self.recreate_agent()
+
+    def install_tools(self, tools: List[Dict[str, str | List[str]]], install_path="/tmp"):
+        """
+        Install tools from a list of tool configurations.
+
+        :param install_path: path to the folder where the tools are installed
+        :param tools: List of dictionaries where each dictionary has:
+                      - 'url': the GitHub URL of the tool repository.
+                      - 'functions': list of paths to the functions to import.
+        """
+        for tool in tools:
+            url = tool['url']
+            functions = tool['functions']
+
+            repo_dir = os.path.join(install_path, os.path.basename(url))
+            if not os.path.exists(repo_dir):
+                subprocess.run(["git", "clone", url, repo_dir], check=True)
+
+            for func_path in functions:
+                module_name, func_name = func_path.rsplit(".", 1)
+                module_path = os.path.join(repo_dir, *module_name.split(".")) + ".py"
+
+                spec = importlib.util.spec_from_file_location(module_name, module_path)
+                module = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(module)
+
+                func = getattr(module, func_name)
+                self.functions.append(func)
+                print(f"Installed function: {func_name} from {module_name}")
+
         self.recreate_agent()
