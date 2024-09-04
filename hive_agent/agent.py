@@ -9,7 +9,7 @@ import os
 
 from typing import Callable, List, Optional, TYPE_CHECKING, Dict
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 from llama_index.agent.openai import OpenAIAgent  # type: ignore   # noqa
@@ -24,6 +24,7 @@ from hive_agent.llms.utils import llm_from_config
 
 from llama_index.core.llms import ChatMessage
 
+from hive_agent.server.models import ToolInstallRequest
 from hive_agent.server.routes import setup_routes, files
 from hive_agent.tools.agent_db import get_db_schemas, text_2_sql
 
@@ -181,6 +182,14 @@ class HiveAgent:
         self.__configure_cors()
         setup_routes(self.__app, self.__agent)
 
+        @self.__app.post("/api/v1/install_tools")
+        async def install_tool(tools: List[ToolInstallRequest]):
+            try:
+                self.install_tools(tools)
+                return {"status": "Tools installed successfully"}
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=str(e))
+
         signal.signal(signal.SIGINT, self.__signal_handler)
         signal.signal(signal.SIGTERM, self.__signal_handler)
 
@@ -294,20 +303,23 @@ class HiveAgent:
         self.functions.append(function_tool)
         self.recreate_agent()
 
-    def install_tools(self, tools: List[Dict[str, str | List[str]]], install_path="/tmp"):
+    def install_tools(self, tools: List[ToolInstallRequest], install_path="/tmp"):
         """
         Install tools from a list of tool configurations.
 
-        :param install_path: path to the folder where the tools are installed
+        :param install_path: Path to the folder where the tools are installed
         :param tools: List of dictionaries where each dictionary has:
                       - 'url': the GitHub URL of the tool repository.
                       - 'functions': list of paths to the functions to import.
         """
         for tool in tools:
-            url = tool['url']
-            functions = tool['functions']
+            url = tool.url
+            functions = tool.functions
+            tool_install_path = install_path
+            if tool.install_path is not None:
+                tool_install_path = tool.install_path
 
-            repo_dir = os.path.join(install_path, os.path.basename(url))
+            repo_dir = os.path.join(tool_install_path, os.path.basename(url))
             if not os.path.exists(repo_dir):
                 subprocess.run(["git", "clone", url, repo_dir], check=True)
 
