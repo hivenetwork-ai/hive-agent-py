@@ -1,6 +1,6 @@
 import os
 from datetime import datetime, timezone
-from typing import Any, List
+from typing import Any, List, Optional
 
 from llama_index.agent.openai import OpenAIAgent  # type: ignore
 from llama_index.core.llms import ChatMessage, MessageRole
@@ -63,13 +63,16 @@ class ChatManager:
 
     async def generate_response(
         self,
-        db_manager: DatabaseManager,
+        db_manager: Optional[DatabaseManager],
         messages: List[ChatMessage],
         last_message: ChatMessage,
         image_document_paths: List[str],
     ) -> str:
-        chat_history = await self.get_messages(db_manager)
-        await self.add_message(db_manager, last_message.role.value, last_message.content)
+        chat_history = []
+
+        if db_manager is not None:
+            chat_history = await self.get_messages(db_manager)
+            await self.add_message(db_manager, last_message.role.value, last_message.content)
 
         if isinstance(Settings.llm, OpenAIMultiModal):
             assistant_message = await self._handle_openai_multimodal(last_message, chat_history, image_document_paths)
@@ -78,7 +81,9 @@ class ChatManager:
         else:
             assistant_message = await self._handle_generic_llm(last_message, chat_history)
 
-        await self.add_message(db_manager, MessageRole.ASSISTANT, assistant_message)
+        if db_manager is not None:
+            await self.add_message(db_manager, MessageRole.ASSISTANT, assistant_message)
+
         return assistant_message
 
     async def _handle_openai_multimodal(
