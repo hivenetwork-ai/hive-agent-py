@@ -11,6 +11,6 @@ class OllamaLLM(LLM):
             tools=self.tools,
             system_prompt=self.system_prompt,
             llm=llm, 
-            verbose=True,
+            # verbose=True,
             tool_retriever=self.tool_retriever,
         ).as_agent()
