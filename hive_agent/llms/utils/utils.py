@@ -24,27 +24,21 @@ from llama_index.multi_modal_llms.openai import OpenAIMultiModal
 
 load_dotenv()
 
-DEFAULT_LLM_TIMEOUT = 30
-
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-
 def _create_llm(llm_type: str, config: Config):
-    timeout = (
-        config.get("timeout", "llm", DEFAULT_LLM_TIMEOUT)
-        if config
-        else DEFAULT_LLM_TIMEOUT
-    )
-    ollama_server_url = config.get("model", "ollama_server_url", "http://localhost:11434")
-    model = config.get("model", "model", "gpt-3.5-turbo")
-    enable_multi_modal = config.get("model", "enable_multi_modal", False)
+    timeout = config.get("timeout")
+
+    ollama_server_url = config.get("ollama_server_url")
+    model = config.get("model")
+    enable_multi_modal = config.get("enable_multi_modal")
 
     if llm_type == "OpenAI":
         if model.startswith("gpt-4") and enable_multi_modal is True:
             return OpenAIMultiModal(model, api_key=os.getenv("OPENAI_API_KEY"), max_new_tokens=300)
         elif "gpt" in model:
-            return OpenAI(model=model, request_timeout=config.get("timeout", "llm", 30))
+            return OpenAI(model=model, request_timeout=timeout)
     elif llm_type == "Anthropic":
         api_key = os.getenv("ANTHROPIC_API_KEY")
         if not api_key:
@@ -81,7 +75,7 @@ def llm_from_wrapper(llm_wrapper: LLM, config: Optional[Config]):
 
 # default to config file if `llm` is not provided in HiveAgent or HiveSwarm creation
 def llm_from_config(config: Config):
-    model = config.get("model", "model", "gpt-3.5-turbo")
+    model = config.get("model")
 
     if "gpt" in model:
         logger.info("OpenAI model selected")

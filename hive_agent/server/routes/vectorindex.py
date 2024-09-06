@@ -25,29 +25,30 @@ def setup_vectorindex_routes(router: APIRouter):
         try:
             if index_type is None or index_type == "basic":
                 retriever = RetrieverBase()
-                index = retriever.create_basic_index(file_path, folder_path)
+                index, file_names = retriever.create_basic_index(file_path, folder_path)
             elif index_type == "chroma":
                 retriever = ChromaRetriever()
-                index = retriever.create_index(
+                index, file_names = retriever.create_index(
                     file_path, folder_path, collection_name=index_name
                 )
             elif index_type == "pinecone-serverless":
                 retriever = PineconeRetriever()
-                index = retriever.create_serverless_index(
+                index, file_names = retriever.create_serverless_index(
                     file_path, folder_path, name=index_name
                 )
             elif index_type == "pinecone-pod":
                 retriever = PineconeRetriever()
-                index = retriever.create_pod_index(
+                index, file_names = retriever.create_pod_index(
                     file_path, folder_path, name=index_name
                 )
             else:
                 raise HTTPException(status_code=400, detail="Invalid index type provided.")
             
-            index_store.add_index(index_name, index)
+            index_store.add_index(index_name, index, file_names)
             return {
                 "message": f"Index {index_name} created successfully.",
                 "index_details": index,
+                "file_names": file_names
             }
         except HTTPException as he:
             raise he
@@ -61,8 +62,10 @@ def setup_vectorindex_routes(router: APIRouter):
     ):
         try:
             index = index_store.get_index(index_name)
-            result = RetrieverBase().insert_documents(index, file_path, folder_path)
-            return {"message": "Documents inserted successfully.", "details": result}
+            result, file_names = RetrieverBase().insert_documents(index, file_path, folder_path)
+            index_store.update_index(index_name, index)
+            index_store.insert_index_files(index_name, file_names)
+            return {"message": "Documents inserted successfully.", "details": result, "file_names": file_names}
         except KeyError:
             raise HTTPException(
                 status_code=404, detail=f"Index {index_name} not found."
@@ -77,8 +80,10 @@ def setup_vectorindex_routes(router: APIRouter):
     ):
         try:
             index = index_store.get_index(index_name)
-            result = RetrieverBase().update_documents(index, file_path, folder_path)
-            return {"message": "Documents updated successfully.", "details": result}
+            result, file_names = RetrieverBase().update_documents(index, file_path, folder_path)
+            index_store.update_index(index_name, index)
+            index_store.update_index_files(index_name, file_names)
+            return {"message": "Documents updated successfully.", "details": result, "file_names": file_names}
         except KeyError:
             raise HTTPException(
                 status_code=404, detail=f"Index {index_name} not found."
@@ -93,8 +98,10 @@ def setup_vectorindex_routes(router: APIRouter):
     ):
         try:
             index = index_store.get_index(index_name)
-            result = RetrieverBase().delete_documents(index, file_path, folder_path)
-            return {"message": "Documents deleted successfully.", "details": result}
+            result, file_names = RetrieverBase().delete_documents(index, file_path, folder_path)
+            index_store.delete_index(index_name)
+            index_store.delete_index_files(index_name)
+            return {"message": "Documents deleted successfully.", "details": result, "file_names": file_names}
         except KeyError:
             raise HTTPException(
                 status_code=404, detail=f"Index {index_name} not found."

@@ -3,7 +3,7 @@ from httpx import AsyncClient
 from fastapi import FastAPI, APIRouter
 from hive_agent.server.routes.vectorindex import setup_vectorindex_routes
 from unittest.mock import MagicMock, patch
-import os 
+import os
 
 @pytest.fixture(scope="module")
 def app():
@@ -18,23 +18,15 @@ async def client(app):
     async with AsyncClient(app=app, base_url="http://test") as test_client:
         yield test_client
 
-
 @pytest.mark.asyncio
 async def test_create_index_basic(client):
-    with patch('hive_agent.tools.retriever.base_retrieve.RetrieverBase.create_basic_index'):
+    with patch('hive_agent.tools.retriever.base_retrieve.RetrieverBase.create_basic_index') as mock_create_index:
+        mock_create_index.return_value = (MagicMock(), ["test.txt"])
         params = {
             "index_name": "test_basic",
-            "index_type": "basic"
+            "index_type": "basic",
+            "file_path": ["test.txt"]
         }
-
-        file_path = ["test.txt"]
-        if file_path:
-            for path in file_path:
-                params["file_path"] = path
-
-        folder_path = None
-        if folder_path:
-            params["folder_path"] = folder_path
 
         response = await client.post(
             "/create_index/",
@@ -46,21 +38,13 @@ async def test_create_index_basic(client):
 
 @pytest.mark.asyncio    
 async def test_create_index_chroma(client):
-    with patch('hive_agent.tools.retriever.chroma_retrieve.ChromaRetriever.create_index'):
-    
+    with patch('hive_agent.tools.retriever.chroma_retrieve.ChromaRetriever.create_index') as mock_create_index:
+        mock_create_index.return_value = (MagicMock(), ["test.txt"])
         params = {
             "index_name": "test_chroma",
-            "index_type": "chroma"
+            "index_type": "chroma",
+            "file_path": ["test.txt"]
         }
-
-        file_path = ["test.txt"]
-        if file_path:
-            for path in file_path:
-                params["file_path"] = path
-
-        folder_path = None
-        if folder_path:
-            params["folder_path"] = folder_path
 
         response = await client.post(
             "/create_index/",
@@ -72,193 +56,114 @@ async def test_create_index_chroma(client):
         
 @pytest.mark.asyncio 
 async def test_create_index_pinecone_serverless(client):
-    with patch('hive_agent.tools.retriever.pinecone_retrieve.PineconeRetriever.create_serverless_index'
-        ),patch.dict(os.environ, {'PINECONE_API_KEY': 'fake_api_key'}):
-    
+    with patch('hive_agent.tools.retriever.pinecone_retrieve.PineconeRetriever.create_serverless_index') as mock_create_index, \
+         patch.dict(os.environ, {'PINECONE_API_KEY': 'fake_api_key'}):
+        mock_create_index.return_value = (MagicMock(), ["test.txt"])
         params = {
             "index_name": "test_pinecone_serverless",
-            "index_type": "pinecone-serverless"
+            "index_type": "pinecone-serverless",
+            "file_path": ["test.txt"]
         }
-
-        file_path = ["test.txt"]
-        if file_path:
-            for path in file_path:
-                params["file_path"] = path
-
-        folder_path = None
-        if folder_path:
-            params["folder_path"] = folder_path
 
         response = await client.post(
             "/create_index/",
             params=params
         )
         
-        print(response.status_code)
-        print(response.json())
-
         assert response.status_code == 200
         assert response.json()["message"] == "Index test_pinecone_serverless created successfully."
 
 @pytest.mark.asyncio 
 async def test_create_index_pinecone_pod(client):
-    with patch('hive_agent.tools.retriever.pinecone_retrieve.PineconeRetriever.create_pod_index'
-        ),patch.dict(os.environ, {'PINECONE_API_KEY': 'fake_api_key'}):
-    
+    with patch('hive_agent.tools.retriever.pinecone_retrieve.PineconeRetriever.create_pod_index') as mock_create_index, \
+         patch.dict(os.environ, {'PINECONE_API_KEY': 'fake_api_key'}):
+        mock_create_index.return_value = (MagicMock(), ["test.txt"])
         params = {
             "index_name": "test_pinecone_pod",
-            "index_type": "pinecone-pod"
+            "index_type": "pinecone-pod",
+            "file_path": ["test.txt"]
         }
-
-        file_path = ["test.txt"]
-        if file_path:
-            for path in file_path:
-                params["file_path"] = path
-
-        folder_path = None
-        if folder_path:
-            params["folder_path"] = folder_path
 
         response = await client.post(
             "/create_index/",
             params=params
         )
         
-        print(response.status_code)
-        print(response.json())
-
         assert response.status_code == 200
         assert response.json()["message"] == "Index test_pinecone_pod created successfully."
 
-
-@pytest.mark.asyncio 
+@pytest.mark.asyncio
 async def test_insert_documents(client):
-   with patch('hive_agent.tools.retriever.base_retrieve.RetrieverBase.create_basic_index'):
+    with patch('hive_agent.server.routes.vectorindex.index_store') as mock_index_store, \
+         patch('hive_agent.tools.retriever.base_retrieve.RetrieverBase.insert_documents') as mock_insert:
+        mock_index = MagicMock()
+        mock_index_store.get_index.return_value = mock_index
+        mock_insert.return_value = ("Documents inserted successfully.", ["test.txt"])
         params = {
             "index_name": "test_insert",
-            "index_type": "basic"
-        }
-
-        file_path = ["test.txt"]
-        if file_path:
-            for path in file_path:
-                params["file_path"] = path
-
-        folder_path = None
-        if folder_path:
-            params["folder_path"] = folder_path
-
-        response = await client.post(
-            "/create_index/",
-            params=params
-        )
-
-        insert_params = {
-            "index_name": "test_insert",
-            "file_path" : ["test.txt"]
+            "file_path": ["test.txt"]
         }
 
         response = await client.post(
             "/insert_documents/",
-            params=insert_params
-        )
-        
-        assert response.status_code == 200
-        assert response.json()["message"] == "Documents inserted successfully."
-
-
-@pytest.mark.asyncio 
-async def test_update_documents(client):
-   with patch('hive_agent.tools.retriever.base_retrieve.RetrieverBase.create_basic_index'):
-        params = {
-            "index_name": "test_insert",
-            "index_type": "basic"
-        }
-
-        file_path = ["test.txt"]
-        if file_path:
-            for path in file_path:
-                params["file_path"] = path
-
-        folder_path = None
-        if folder_path:
-            params["folder_path"] = folder_path
-
-        response = await client.post(
-            "/create_index/",
             params=params
         )
+        
+        assert response.status_code == 200, f"Unexpected status code: {response.status_code}, response: {response.text}"
+        assert response.json()["message"] == "Documents inserted successfully."
 
-        insert_params = {
-            "index_name": "test_insert",
-            "file_path" : ["test.txt"]
+@pytest.mark.asyncio
+async def test_update_documents(client):
+    with patch('hive_agent.server.routes.vectorindex.index_store') as mock_index_store, \
+         patch('hive_agent.tools.retriever.base_retrieve.RetrieverBase.update_documents') as mock_update:
+        mock_index = MagicMock()
+        mock_index_store.get_index.return_value = mock_index
+        mock_update.return_value = ("Documents updated successfully.", ["test.txt"])
+        params = {
+            "index_name": "test_update",
+            "file_path": ["test.txt"]
         }
 
         response = await client.put(
             "/update_documents/",
-            params=insert_params
-        )
-        
-        assert response.status_code == 200
-        assert response.json()["message"] == "Documents updated successfully."
-
-@pytest.mark.asyncio 
-async def test_delete_documents(client):
-   with patch('hive_agent.tools.retriever.base_retrieve.RetrieverBase.create_basic_index'):
-        params = {
-            "index_name": "test_insert",
-            "index_type": "basic"
-        }
-
-        file_path = ["test.txt"]
-        if file_path:
-            for path in file_path:
-                params["file_path"] = path
-
-        folder_path = None
-        if folder_path:
-            params["folder_path"] = folder_path
-
-        response = await client.post(
-            "/create_index/",
             params=params
         )
+        
+        assert response.status_code == 200, f"Unexpected status code: {response.status_code}, response: {response.text}"
+        assert response.json()["message"] == "Documents updated successfully."
 
-        insert_params = {
-            "index_name": "test_insert",
-            "file_path" : ["test.txt"]
+@pytest.mark.asyncio
+async def test_delete_documents(client):
+    with patch('hive_agent.server.routes.vectorindex.index_store') as mock_index_store, \
+         patch('hive_agent.tools.retriever.base_retrieve.RetrieverBase.delete_documents') as mock_delete:
+        mock_index = MagicMock()
+        mock_index_store.get_index.return_value = mock_index
+        mock_delete.return_value = ("Documents deleted successfully.", ["test.txt"])
+        params = {
+            "index_name": "test_delete",
+            "file_path": ["test.txt"]
         }
 
         response = await client.delete(
             "/delete_documents/",
-            params=insert_params
+            params=params
         )
         
-        assert response.status_code == 200
+        assert response.status_code == 200, f"Unexpected status code: {response.status_code}, response: {response.text}"
         assert response.json()["message"] == "Documents deleted successfully."
 
 @pytest.mark.asyncio
-async def test_create_index_basic(client):
-    with patch('hive_agent.tools.retriever.base_retrieve.RetrieverBase.create_basic_index'):
-        params = {
-            "index_name": "test_invalid",
-            "index_type": "invalid_type"
-        }
+async def test_create_index_invalid_type(client):
+    params = {
+        "index_name": "test_invalid",
+        "index_type": "invalid_type",
+        "file_path": ["test.txt"]
+    }
 
-        file_path = ["test.txt"]
-        if file_path:
-            for path in file_path:
-                params["file_path"] = path
+    response = await client.post(
+        "/create_index/",
+        params=params
+    )
 
-        folder_path = None
-        if folder_path:
-            params["folder_path"] = folder_path
-
-        response = await client.post(
-            "/create_index/",
-            params=params
-        )
-        print(response.status_code)
-        print(response.json())
-        assert response.status_code == 400
-        assert response.json()["detail"] == "Invalid index type provided."
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Invalid index type provided."

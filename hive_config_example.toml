@@ -8,3 +8,10 @@ type = "dev"
 
 [timeout]
 llm = 30
+
+[target_agent_id]
+model = "gpt-3.5-turbo"
+timeout = 15
+environment = "dev"
+enable_multi_modal = true
+ollama_server_url = 'http://123.456.78.90:11434'
