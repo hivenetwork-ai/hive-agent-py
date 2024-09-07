@@ -148,6 +148,7 @@ class HiveAgent:
         @self.__app.post("/api/v1/install_tools")
         async def install_tool(tools: List[ToolInstallRequest]):
             try:
+                print(f"now installing tools:\n{tools}")
                 self.install_tools(tools)
                 return {"status": "Tools installed successfully"}
             except Exception as e:
