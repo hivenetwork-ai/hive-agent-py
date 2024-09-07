@@ -357,25 +357,38 @@ class HiveAgent:
         self.functions.append(function_tool)
         self.recreate_agent()
 
-    def install_tools(self, tools: List[ToolInstallRequest], install_path="/tmp"):
+    def install_tools(self, tools: List[ToolInstallRequest], install_path="hive-agent-data/tools"):
         """
         Install tools from a list of tool configurations.
 
         :param install_path: Path to the folder where the tools are installed
-        :param tools: List of dictionaries where each dictionary has:
-                      - 'url': the GitHub URL of the tool repository.
+        :param tools: List of ToolInstallRequest objects where each contains:
+                      - 'github_url': the GitHub URL of the tool repository.
                       - 'functions': list of paths to the functions to import.
+                      - 'install_path': optional path where to install the tools.
+                      - 'github_token': optional GitHub token for private repositories.
+                      - 'env_vars': optional environment variables required for the tool to run.
         """
+        os.makedirs(install_path, exist_ok=True)
+
         for tool in tools:
-            url = tool.url
+            if tool.env_vars is not None:
+                for key, value in tool.env_vars:
+                    os.environ[key] = value
+
+            github_url = tool.github_url
             functions = tool.functions
             tool_install_path = install_path
             if tool.install_path is not None:
                 tool_install_path = tool.install_path
 
-            repo_dir = os.path.join(tool_install_path, os.path.basename(url))
+            if tool.github_token:
+                url_with_token = tool.url.replace("https://", f"https://{tool.github_token}@")
+                github_url = url_with_token
+
+            repo_dir = os.path.join(tool_install_path, os.path.basename(github_url))
             if not os.path.exists(repo_dir):
-                subprocess.run(["git", "clone", url, repo_dir], check=True)
+                subprocess.run(["git", "clone", github_url, repo_dir], check=True)
 
             for func_path in functions:
                 module_name, func_name = func_path.rsplit(".", 1)

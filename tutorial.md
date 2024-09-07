@@ -480,3 +480,91 @@ curl -X 'DELETE' \
   "hive-agent-data/files/user/pdf-sample.pdf"
 ]'
 ```
+
+
+## Tools Endpoints
+
+### **POST /api/v1/install_tools**
+
+This endpoint installs tools into the agent by sending a list of tools with their GitHub URLs, function paths, and an optional GitHub token for private repositories.
+
+**Request Body:**
+
+```json
+{
+  "tools": [
+    {
+      "github_url": "https://github.com/example/tool1",
+      "functions": [
+        "module1.function1",
+        "module2.function2"
+      ],
+      "install_path": "/app/tools/tool1/",
+      "github_token": "your_private_repo_token"
+    },
+    {
+      "github_url": "https://github.com/example/tool2",
+      "functions": [
+        "module1.functionA"
+      ],
+      "install_path": "/app/tools/tool2/"
+    },
+    {
+      "github_url": "https://github.com/example/tool3",
+      "functions": [
+        "module1.functionA"
+      ],
+      "install_path": "/app/tools/tool3/",
+      "env_vars": {
+        "EXAMPLE_API_KEY": "api-key-123"
+      }
+    }
+  ]
+}
+```
+
+**Request Parameters:**
+
+- **github_url**: The GitHub URL of the tool repository.
+- **functions**: A list of functions (in `module.function` format) to be installed from the tool.
+- **install_path** (optional): The installation path on the server. Defaults to `/tmp` if not provided.
+- **github_token** (optional): A token for accessing private GitHub repositories.
+- **env_vars** (optional): The environment variables required for the tool to run.
+
+**Response:**
+
+- A JSON object indicating whether the tools were installed successfully.
+
+**Usage Example:**
+
+```bash
+curl -X 'POST' \
+  'http://0.0.0.0:8000/api/v1/install_tools' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "tools": [
+    {
+      "github_url": "https://github.com/example/tool1",
+      "functions": ["module1.function1", "module2.function2"],
+      "install_path": "/app/tools/tool1/",
+      "github_token": "your_private_repo_token"
+    },
+    {
+      "github_url": "https://github.com/example/tool2",
+      "functions": ["module1.functionA"],
+      "install_path": "/app/tools/tool2/"
+    },
+    {
+      "github_url": "https://github.com/example/tool3",
+      "functions": [
+        "module1.functionA"
+      ],
+      "install_path": "/app/tools/tool3/",
+      "env_vars": {
+        "EXAMPLE_API_KEY": "api-key-123"
+      }
+    }
+  ]
+}'
+```
