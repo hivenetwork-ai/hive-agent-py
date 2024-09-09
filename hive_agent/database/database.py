@@ -4,7 +4,7 @@ import logging
 
 from typing import Dict, Any, Optional, List
 
-from sqlalchemy import Column, Integer, String, MetaData, Table, select, text, JSON
+from sqlalchemy import Column, Integer, String, MetaData, Table, select, text, JSON, DateTime
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine

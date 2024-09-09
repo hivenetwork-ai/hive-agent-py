@@ -9,6 +9,7 @@ logger = logging.getLogger(__name__)
 
 
 from hive_agent.tools.retriever.base_retrieve import IndexStore, RetrieverBase
+from hive_agent.sdk_context import SDKContext
 
 ALLOWED_FILE_TYPES = [
     "application/json",
@@ -20,6 +21,7 @@ ALLOWED_FILE_TYPES = [
     "image/png",
     "application/msword",
     "application/vnd.ms-excel",
+    "text/markdown"
 ]
 
 file_store = FileStore(BASE_DIR)
@@ -27,7 +29,7 @@ file_store = FileStore(BASE_DIR)
 index_store = IndexStore.get_instance()
 
 
-def setup_files_routes(router: APIRouter):
+def setup_files_routes(router: APIRouter,  id: str, sdk_context: SDKContext):
     @router.post("/uploadfiles/")
     async def create_upload_files(files: List[UploadFile] = File(...)):
         saved_files = []
@@ -44,6 +46,7 @@ def setup_files_routes(router: APIRouter):
                 )
 
             try:
+                agent = sdk_context.get_resource(id)
                 filename = await file_store.save_file(file)
                 saved_files.append(filename)
 
@@ -52,18 +55,22 @@ def setup_files_routes(router: APIRouter):
                     RetrieverBase().insert_documents(
                         index, file_path=["{BASE_DIR}/{filename}".format(BASE_DIR=BASE_DIR, filename=filename)]
                     )
+                    index_store.update_index("BaseRetriever", index)
+                    index_store.insert_index_files("BaseRetriever", [filename])
                     logger.info("Inserting data to existing basic index")
                     logger.info(f"Index: {index_store.list_indexes()}")
+                    agent.recreate_agent()
                     index_store.save_to_file()
 
                 else:
                     retriever = RetrieverBase()
-                    index = retriever.create_basic_index(
+                    index, file_names = retriever.create_basic_index(
                         file_path=["{BASE_DIR}/{filename}".format(BASE_DIR=BASE_DIR, filename=filename)]
                     )
-                    index_store.add_index(retriever.name, index)
+                    index_store.add_index(retriever.name, index, file_names)
                     logger.info("Inserting data to new basic index")
                     logger.info(f"Index: {index_store.list_indexes()}")
+                    agent.recreate_agent()
                     index_store.save_to_file()
 
             except ValueError as e:

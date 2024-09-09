@@ -1,11 +1,12 @@
 import pytest
 from fastapi import APIRouter, FastAPI, status
 from httpx import AsyncClient
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, patch, MagicMock
 from io import BytesIO
 
 from llama_index.core.llms import ChatMessage, MessageRole
 from hive_agent.server.routes.chat import setup_chat_routes
+from hive_agent.sdk_context import SDKContext
 
 
 class MockAgent:
@@ -25,10 +26,23 @@ def agent():
 
 
 @pytest.fixture
-def app(agent):
+def sdk_context():
+    mock_context = MagicMock(spec=SDKContext)
+    mock_context.get_attributes.return_value = {
+        'llm': MagicMock(),
+        'agent_class': lambda *args: MagicMock(agent=MockAgent()),
+        'tools': [],
+        'instruction': "",
+        'tool_retriever': None
+    }
+    return mock_context
+
+
+@pytest.fixture
+def app(agent, sdk_context):
     fastapi_app = FastAPI()
     v1_router = APIRouter()
-    setup_chat_routes(v1_router, agent)
+    setup_chat_routes(v1_router, "test_id", sdk_context)
     fastapi_app.include_router(v1_router, prefix="/api/v1")
     return fastapi_app
 
@@ -71,7 +85,8 @@ async def test_chat_success(client, agent):
     mock_chat_manager = AsyncMock()
     mock_chat_manager.generate_response.return_value = "chat response"
 
-    with patch("hive_agent.server.routes.chat.ChatManager", return_value=mock_chat_manager):
+    with patch("hive_agent.server.routes.chat.ChatManager", return_value=mock_chat_manager), \
+         patch("hive_agent.server.routes.chat.inject_additional_attributes", new=lambda f, _: f()):
         payload = {
             "user_id": "user1",
             "session_id": "session1",
@@ -110,9 +125,9 @@ async def test_chat_media_success(client, agent):
     mock_chat_manager = AsyncMock()
     mock_chat_manager.generate_response.return_value = "chat response"
 
-    with patch("hive_agent.server.routes.chat.ChatManager", return_value=mock_chat_manager), patch(
-        "hive_agent.server.routes.chat.file_store.save_file", new_callable=AsyncMock
-    ) as mock_save_file:
+    with patch("hive_agent.server.routes.chat.ChatManager", return_value=mock_chat_manager), \
+         patch("hive_agent.server.routes.chat.file_store.save_file", new_callable=AsyncMock) as mock_save_file, \
+         patch("hive_agent.server.routes.chat.inject_additional_attributes", new=lambda f, _: f()):
 
         mock_save_file.return_value = "file_path.txt"
 

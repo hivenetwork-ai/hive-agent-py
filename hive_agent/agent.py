@@ -33,10 +33,13 @@ from hive_agent.tools.retriever.base_retrieve import RetrieverBase, IndexStore, 
 from hive_agent.tools.retriever.chroma_retrieve import ChromaRetriever
 from hive_agent.tools.retriever.pinecone_retrieve import PineconeRetriever
 from llama_index.core.objects import ObjectIndex
+from llama_index.core.tools import QueryEngineTool, ToolMetadata
 
 from dotenv import load_dotenv
 from hive_agent.config import Config
 from hive_agent.utils import tools_from_funcs
+import uuid
+from hive_agent.sdk_context import SDKContext
 
 load_dotenv()
 
@@ -57,7 +60,7 @@ class HiveAgent:
             name: str,
             functions: List[Callable],
             llm: Optional[LLM] = None,
-            config_path="../../hive_config_example.toml",
+            config_path="./hive_config_example.toml",
             host="0.0.0.0",
             port=8000,
             instruction="",
@@ -69,9 +72,9 @@ class HiveAgent:
             retrieval_tool="basic",
             load_index_file=False,
             swarm_mode=False,
+            sdk_context: Optional[SDKContext] = None
     ):
-        self.__llm = llm
-        self.id = agent_id
+        self.id = agent_id if agent_id != "" else str(uuid.uuid4())
         self.name = name
         self.functions = functions
         self.config_path = config_path
@@ -82,21 +85,27 @@ class HiveAgent:
         self.instruction = instruction
         self.role = role
         self.description = description
+        self.sdk_context = sdk_context if sdk_context is not None else SDKContext(config_path = config_path)
+        self.__config = self.sdk_context.get_config(self.name)
+        self.__llm = llm if llm is not None else None
+
         self.__optional_dependencies: dict[str, bool] = {}
-        self.__config = Config(config_path=config_path)
         self.__swarm_mode = swarm_mode
         self.retrieve = retrieve
         self.required_exts = required_exts
         self.retrieval_tool = retrieval_tool
         self.load_index_file = load_index_file
-        logging.basicConfig(stream=sys.stdout, level=self.__config.get_log_level())
+        logging.basicConfig(stream=sys.stdout, level=self.__config.get("log"))
         logging.getLogger().addHandler(logging.StreamHandler(stream=sys.stdout))
 
         self.logger = logging.getLogger()
-        self.logger.setLevel(self.__config.get_log_level())
+        self.logger.setLevel(self.__config.get("log"))
 
         self._check_optional_dependencies()
         self.__setup()
+
+        self.sdk_context.add_resource(self, resource_type="agent")
+        [self.sdk_context.add_resource(func, resource_type="tool") for func in self.functions]
 
     def _check_optional_dependencies(self):
         try:
@@ -115,55 +124,9 @@ class HiveAgent:
         return False
 
     def __setup(self):
-        custom_tools = tools_from_funcs(self.functions)
 
-        # TODO: pass db client to db tools directly
-        system_tools = tools_from_funcs([get_db_schemas, text_2_sql])
-
-        tools = custom_tools + system_tools
-
-        is_base_dir_not_empty = self.is_dir_not_empty(files.BASE_DIR)
-        is_index_dir_not_empty = self.is_dir_not_empty(index_base_dir)
-
-        if is_index_dir_not_empty and self.load_index_file:
-            index_store = IndexStore.load_from_file()
-        else:
-            index_store = IndexStore.get_instance()
-
-        tool_retriever = None
-
-        if is_base_dir_not_empty and self.retrieve:
-            if "basic" in self.retrieval_tool:
-                retriever = RetrieverBase()
-                index = retriever.create_basic_index()
-                index_store.add_index(retriever.name, index)
-
-            if "chroma" in self.retrieval_tool:
-                chroma_retriever = ChromaRetriever()
-                index = chroma_retriever.create_index()
-                index_store.add_index(chroma_retriever.name, index)
-
-            if "pinecone-serverless" in self.retrieval_tool:
-                pinecone_retriever = PineconeRetriever()
-                index = pinecone_retriever.create_serverless_index()
-                index_store.add_index(pinecone_retriever.name, index)
-
-            if "pinecone-pod" in self.retrieval_tool:
-                pinecone_retriever = PineconeRetriever()
-                index = pinecone_retriever.create_pod_index()
-                index_store.add_index(pinecone_retriever.name, index)
-
-            index_store.save_to_file()
-
-        if self.load_index_file or self.retrieve:
-            vectorstore_object = ObjectIndex.from_objects(
-                tools,
-                index=index_store.get_all_indexes(),
-            )
-            tool_retriever = vectorstore_object.as_retriever(similarity_top_k=3)
-            tools = []  # Cannot specify both tools and tool_retriever
-
-        self._assign_agent(tools, tool_retriever)
+        self.get_indexstore()
+        self.init_agent()
 
         if self.__optional_dependencies.get("web3"):
             from hive_agent.wallet import WalletStore
@@ -180,7 +143,7 @@ class HiveAgent:
     def __setup_server(self):
 
         self.__configure_cors()
-        setup_routes(self.__app, self.__agent)
+        setup_routes(self.__app, self.id, self.sdk_context)
 
         @self.__app.post("/api/v1/install_tools")
         async def install_tool(tools: List[ToolInstallRequest]):
@@ -194,7 +157,7 @@ class HiveAgent:
         signal.signal(signal.SIGTERM, self.__signal_handler)
 
     def __configure_cors(self):
-        environment = self.__config.get("environment", "type")  # default to 'development' if not set
+        environment = self.__config.get("environment")  # default to 'development' if not set
 
         if environment == "dev":
             logger = logging.getLogger("uvicorn")
@@ -256,32 +219,114 @@ class HiveAgent:
         finally:
             logging.info("cleanup process completed")
 
-    def recreate_agent(self):
+    def get_indexstore(self):
+        is_base_dir_not_empty = self.is_dir_not_empty(files.BASE_DIR)
+        is_index_dir_not_empty = self.is_dir_not_empty(index_base_dir)
+
+        if is_index_dir_not_empty and self.load_index_file:
+            self.index_store = IndexStore.load_from_file()
+        else:
+            self.index_store = IndexStore.get_instance()
+        
+        if is_base_dir_not_empty and self.retrieve:
+            self.add_batch_indexes()
+
+    def add_batch_indexes(self):
+    
+        if "basic" in self.retrieval_tool:
+            retriever = RetrieverBase()
+            index,file_names = retriever.create_basic_index()
+            self.index_store.add_index(retriever.name, index, file_names)
+
+        if "chroma" in self.retrieval_tool:
+            chroma_retriever = ChromaRetriever()
+            index,file_names = chroma_retriever.create_index()
+            self.index_store.add_index(chroma_retriever.name, index, file_names)
+
+        if "pinecone-serverless" in self.retrieval_tool:
+            pinecone_retriever = PineconeRetriever()
+            index,file_names = pinecone_retriever.create_serverless_index()
+            self.index_store.add_index(pinecone_retriever.name, index, file_names)
+
+        if "pinecone-pod" in self.retrieval_tool:
+            pinecone_retriever = PineconeRetriever()
+            index,file_names = pinecone_retriever.create_pod_index()
+            self.index_store.add_index(pinecone_retriever.name, index, file_names)
+
+            self.index_store.save_to_file()
+
+    def get_tools(self):
 
         custom_tools = tools_from_funcs(self.functions)
+        
+        self.sdk_context.load_default_utility()
 
-        # TODO: pass db client to db tools directly
-        system_tools = tools_from_funcs([get_db_schemas, text_2_sql])
-
+        def _text_2_sql(query: str):
+            return text_2_sql(self.sdk_context, query)
+        
+        def _get_db_schemas():
+            return get_db_schemas(self.sdk_context)
+        
+        system_tools = tools_from_funcs([
+            _text_2_sql,
+            _get_db_schemas
+        ])
         tools = custom_tools + system_tools
 
-        index_store = IndexStore.get_instance()
+        return tools
 
-        vectorstore_object = ObjectIndex.from_objects(
-            tools,
-            index=index_store.get_all_indexes(),
-        )
-        tool_retriever = vectorstore_object.as_retriever(similarity_top_k=3)
-        tools = []  # Cannot specify both tools and tool_retriever
-        self._assign_agent(tools, tool_retriever)
+    def init_agent(self):
+
+        tools = self.get_tools()
+        tool_retriever = None
+
+        if self.load_index_file or self.retrieve or len(self.index_store.list_indexes()) > 0:
+            index_store = IndexStore.get_instance()
+            query_engine_tools = []
+            for index_name in index_store.get_all_index_names():
+                index_files = index_store.get_index_files(index_name)
+                query_engine_tools.append(
+                    QueryEngineTool(
+                        query_engine = index_store.get_index(index_name).as_query_engine(),
+                        metadata=ToolMetadata(name=index_name+'_tool',
+                                              description=("Useful for questions related to specific aspects of documents"
+                                              f" {index_files}")
+                                                                                                            )))
+            
+            tools = tools + query_engine_tools
+
+            vectorstore_object = ObjectIndex.from_objects(
+                tools,
+                index=index_store.get_all_indexes(),
+            )
+            tool_retriever = vectorstore_object.as_retriever(similarity_top_k=3)
+            tools = []  # Cannot specify both tools and tool_retriever
+            self._assign_agent(tools, tool_retriever)
+        else:
+            self._assign_agent(tools, tool_retriever)
+    
+    def recreate_agent(self):
+        return self.init_agent()
 
     def _assign_agent(self, tools, tool_retriever):
         if self.__llm is not None:
             print(f"using provided llm: {type(self.__llm)}")
-            self.__agent = self.__llm.agent
+            agent_class = type(self.__llm)
+            llm = self.__llm
+
+            self.sdk_context.set_attributes(
+                id=self.id,
+                llm = llm,
+                tools=tools,
+                tool_retriever=tool_retriever,
+                agent_class=agent_class,
+                instruction=self.instruction
+            )
+            self.__agent = agent_class(llm, tools, self.instruction, tool_retriever).agent
+            
         else:
-            model = self.__config.get("model", "model", "gpt-3.5-turbo")
-            enable_multi_modal = self.__config.get("model", "enable_multi_modal", False)
+            model = self.__config.get("model")
+            enable_multi_modal = self.__config.get("enable_multi_modal")
             llm = llm_from_config(self.__config)
 
             if model.startswith("gpt-4") and enable_multi_modal is True:
@@ -296,6 +341,15 @@ class HiveAgent:
                 agent_class = MistralLLM
             else:
                 agent_class = OpenAILLM
+
+            self.sdk_context.set_attributes(
+                id=self.id,
+                llm = llm,
+                tools=tools,
+                tool_retriever=tool_retriever,
+                agent_class=agent_class,
+                instruction=self.instruction
+            )
 
             self.__agent = agent_class(llm, tools, self.instruction, tool_retriever).agent
 
@@ -336,3 +390,4 @@ class HiveAgent:
                 print(f"Installed function: {func_name} from {module_name}")
 
         self.recreate_agent()
+    

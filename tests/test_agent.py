@@ -29,8 +29,6 @@ def agent():
         "llama_index.core.objects.ObjectIndex.from_objects"
     ), patch.object(
         IndexStore, "save_to_file", MagicMock()
-    ), patch(
-        "hive_agent.config.Config.get", return_value="gpt-3.5-turbo"  # Default value for initialization
     ):
 
         os.environ['ANTHROPIC_API_KEY'] = "anthropic_api_key"
