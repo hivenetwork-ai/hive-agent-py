@@ -10,7 +10,10 @@ from hive_agent.config import Config
 from hive_agent.llms.llm import LLM
 from hive_agent.llms.utils import llm_from_wrapper
 from hive_agent.utils import tools_from_funcs
+from hive_agent.sdk_context import SDKContext
+from hive_agent.llms.utils import llm_from_config_without_agent
 
+import uuid
 
 class AgentMap(Dict[str, Dict[str, Any]]):
     def __init__(self):
@@ -31,21 +34,25 @@ class HiveSwarm:
         name: str,
         description: str,
         instruction: str,
-        llm: Optional[LLM],
         functions: List[Callable],
+        llm: Optional[LLM] = None,
         agents: List[HiveAgent] = None,
-        config_path="../../hive_config_example.toml",
+        config_path="./hive_config_example.toml",
         swarm_id=os.getenv("HIVE_SWARM_ID", ""),
+        sdk_context: Optional[SDKContext] = None
     ):
-        self.id = swarm_id
+        self.id = swarm_id if swarm_id != "" else str(uuid.uuid4())
         self.name = name
         self.description = description
         self.instruction = instruction
         self.__agents = AgentMap()
-        self.__llm = llm
-        self.config = Config(config_path=config_path)
         self.functions = functions
+        self.sdk_context = sdk_context if sdk_context is not None else SDKContext(config_path=config_path)
+        self.__config = self.sdk_context.get_config(self.name)
+        self.__llm = llm if llm is not None else llm_from_config_without_agent(self.__config)
 
+
+        agents = self.sdk_context.generate_agents_from_config()
         if agents:
             for agent in agents:
                 self.__agents[agent.name] = {
@@ -53,8 +60,10 @@ class HiveSwarm:
                     "agent": agent,
                     "role": agent.role,
                     "description": agent.description,
+                    "sdk_context": self.sdk_context
                 }
-
+                
+        self.sdk_context.add_resource(self, resource_type="swarm")
         self._build_swarm()
 
     def _build_swarm(self):
@@ -78,7 +87,7 @@ class HiveSwarm:
 
         self.__swarm = ReActAgent.from_tools(
             tools=tools,
-            llm=llm_from_wrapper(self.__llm, self.config),
+            llm=llm_from_wrapper(self.__llm, self.__config),
             verbose=True,
             context=self.instruction,
         )
@@ -92,6 +101,7 @@ class HiveSwarm:
             "role": agent.role,
             "description": agent.description,
         }
+        self.sdk_context.add_resource(agent, resource_type="agent")
         self._build_swarm()
 
     def remove_agent(self, name: str):

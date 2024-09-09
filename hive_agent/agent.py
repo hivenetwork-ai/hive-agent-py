@@ -38,7 +38,7 @@ from llama_index.core.tools import QueryEngineTool, ToolMetadata
 from dotenv import load_dotenv
 from hive_agent.config import Config
 from hive_agent.utils import tools_from_funcs
-
+from hive_agent.llms.utils import llm_from_config_without_agent
 import uuid
 from hive_agent.sdk_context import SDKContext
 
@@ -75,7 +75,6 @@ class HiveAgent:
             swarm_mode=False,
             sdk_context: Optional[SDKContext] = None
     ):
-        self.__llm = llm
         self.id = agent_id if agent_id != "" else str(uuid.uuid4())
         self.name = name
         self.functions = functions
@@ -88,9 +87,10 @@ class HiveAgent:
         self.role = role
         self.description = description
         self.sdk_context = sdk_context if sdk_context is not None else SDKContext(config_path = config_path)
-        self.__config = self.sdk_context.get_config(self.id)
+        self.__config = self.sdk_context.get_config(self.name)
+        self.__llm = llm if llm is not None else llm_from_config_without_agent(self.__config)
+
         self.__optional_dependencies: dict[str, bool] = {}
-        #self.__config = Config(config_path=config_path)
         self.__swarm_mode = swarm_mode
         self.retrieve = retrieve
         self.required_exts = required_exts

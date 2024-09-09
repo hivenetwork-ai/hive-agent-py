@@ -66,9 +66,51 @@ class SDKContext:
                     "timeout": self.config.get(section, "timeout", self.default_config["timeout"]),
                     "log": self.config.get(section, "log", self.default_config["log"]),
                     "ollama_server_url": self.config.get(section, "ollama_server_url", self.default_config["ollama_server_url"]),
-                    "enable_multi_modal": self.config.get(section, "enable_multi_modal", self.default_config["enable_multi_modal"])
+                    "enable_multi_modal": self.config.get(section, "enable_multi_modal", self.default_config["enable_multi_modal"]),
+                    "tools": self.config.get(section, "tools", []),
+                    "instruction": self.config.get(section, "instruction", "")
                 }
         return agent_configs
+    
+    def add_agent_config(self, file_path):
+        agent_config = Config(file_path)
+        for section in agent_config.config:
+            if section not in ["model", "environment", "timeout", "log"]:
+                agent_config = {
+                    "model": self.config.get(section, "model", self.default_config["model"]),
+                    "environment": self.config.get(section, "environment", self.default_config["environment"]),
+                    "timeout": self.config.get(section, "timeout", self.default_config["timeout"]),
+                    "log": self.config.get(section, "log", self.default_config["log"]),
+                    "ollama_server_url": self.config.get(section, "ollama_server_url", self.default_config["ollama_server_url"]),
+                    "enable_multi_modal": self.config.get(section, "enable_multi_modal", self.default_config["enable_multi_modal"]),
+                    "tools": self.config.get(section, "tools", []),
+                    "instruction": self.config.get(section, "instruction", "")
+                }
+
+        self.agent_configs[section] = agent_config
+
+    def generate_agents_from_config(self):
+        from hive_agent.agent import HiveAgent
+        """
+        Generate agents from the configuration file.
+        """
+        agents = []
+        for section in self.agent_configs:
+            if section not in ["model", "environment", "timeout", "log"]:
+                agent_config = self.agent_configs[section]
+                agent = HiveAgent(
+                    name=section,
+                    functions=[getattr(importlib.import_module(func["module"]), func["name"]) for func in agent_config.get("tools")],
+                    instruction=agent_config.get("instruction"),
+                    role=agent_config.get("role"),
+                    description=agent_config.get("description"),
+                    swarm_mode=True,
+                    sdk_context=self
+                )
+                agents.append(agent)
+                self.add_resource(agent, resource_type="agent")
+
+        return agents
 
     def get_config(self, agent: str):
         """
@@ -121,7 +163,6 @@ class SDKContext:
                 "id": resource.id,
                 "name": resource.name,
                 "config_path": resource.config_path,
-                "llm": resource._HiveAgent__llm,
                 "type": resource_type,
                 "host": resource._HiveAgent__host,
                 "port": resource._HiveAgent__port,
@@ -149,7 +190,7 @@ class SDKContext:
                 "type": resource_type,
                 "instruction": resource.instruction,
                 "description": resource.description,
-                "agents": [agent.id for agent in resource._HiveSwarm__agents.values()],
+                "agents": [agent['id'] for agent in resource._HiveSwarm__agents.values()],
                 "functions": [{"module": func.__module__, "name": func.__name__} for func in resource.functions]
             }
             self.resources[resource.id] = {
@@ -209,9 +250,9 @@ class SDKContext:
         state = self.__dict__.copy()
         # Exclude non-serializable objects
         state["resources"] = {k: v["init_params"] if isinstance(v, dict) else v for k, v in state["resources"].items()}
+        state["utilities"] = {k: v["info"] if isinstance(v, dict) else v for k, v in state["utilities"].items()}
         state.pop('config', None)
         state.pop('resources_info', None)
-        state.pop('utilities', None)
 
         with open(file_path, 'w') as f:
             json.dump(state, f, default=str, indent=4)
@@ -226,9 +267,11 @@ class SDKContext:
             state = json.load(f)
 
         self.__dict__.update(state)
-        #self.config = Config(self.config_path)  ???? 
+        self.default_config = state['default_config']
+        self.agent_configs = state['agent_configs']
         self.resources = {k: {"init_params": v, "object": None} if isinstance(v, dict) else v for k, v in self.resources.items()}
         self.utilities = {}
+        self.load_default_utility()
         self.restore_non_serializable_objects()
         return self
 
@@ -242,45 +285,23 @@ class SDKContext:
             if isinstance(resource, dict) and resource["init_params"]["type"] == "agent":
                 params = resource["init_params"]
                 functions = [getattr(importlib.import_module(func["module"]), func["name"]) for func in params["functions"]]
+
                 resource_obj = HiveAgent(
+                    agent_id=params["id"],
                     name=params["name"],
-                    functions=functions,
-                    sdk_context=self,
-                    config_path=params.get("config_path", "../../hive_config_example.toml"),
+                    sdk_context= self,
                     host=params["host"],
                     port=params["port"],
                     instruction=params["instruction"],
                     role=params["role"],
-                    retrieve=params["retrieve"],
+                    description=params["description"],
+                    swarm_mode=params["swarm_mode"],
                     required_exts=params["required_exts"],
                     retrieval_tool=params["retrieval_tool"],
-                    load_index_file=params["load_index_file"]
+                    load_index_file=params["load_index_file"],
+                    functions=functions,
                 )
                 self.resources[name]["object"] = resource_obj
-
-    def save_agent_configs_and_resources_info(self, file_path="agent_configs_and_resources_info.json"):
-        """
-        Save the agent configurations and resources information to a JSON file.
-
-        :param file_path: Path to the file where the data should be saved.
-        """
-        data = {
-            "agent_configs": self.agent_configs,
-            "resources_info": self.resources_info
-        }
-        with open(file_path, 'w') as f:
-            json.dump(data, f, indent=4)
-
-    def load_agent_configs_and_resources_info(self, file_path="agent_configs_and_resources_info.json"):
-        """
-        Load the agent configurations and resources information from a JSON file.
-
-        :param file_path: Path to the file from which the data should be loaded.
-        """
-        with open(file_path, 'r') as f:
-            data = json.load(f)
-            self.agent_configs = data.get("agent_configs", {})
-            self.resources_info = data.get("resources_info", {})
 
     async def initialize_database(self):
         await initialize_db()
@@ -291,18 +312,21 @@ class SDKContext:
         async for db in get_db():
             db_manager = DatabaseManager(db)
 
-            # Create a table to store configuration and resource details as JSON
-            await db_manager.create_table('sdkcontext', {
-                'type': 'String',
-                'data': 'JSON',
-                'create_date': 'DateTime'
-            })
+            table_exists = await db_manager.get_table_definition("sdkcontext")
+            if table_exists == None:
+                # Create a table to store configuration and resource details as JSON
+                await db_manager.create_table('sdkcontext', {
+                    'type': 'String',
+                    'data': 'JSON',
+                    'create_date': 'DateTime'
+                })
 
             # Prepare the data to be inserted
             config_data = {
                 'default_config': self.default_config,
                 'agent_configs': self.agent_configs,
-                'resources': {k: v['init_params'] for k, v in self.resources.items()}
+                'resources': {k: v['init_params'] for k, v in self.resources.items()},
+                'utilities': {k: v['info'] for k, v in self.utilities.items()}
             }
 
             # Insert the data into the table
@@ -345,10 +369,12 @@ class SDKContext:
                 print(config_record)
                 state = json.loads(config_record[0][2])
 
-                # Update the SDKContext state with the loaded data
                 self.__dict__.update(state)
-                self.resources = {k: {"init_params": v, "object": None} for k, v in self.resources.items()}
+                self.default_config = state['default_config']
+                self.agent_configs = state['agent_configs']
+                self.resources = {k: {"init_params": v, "object": None} if isinstance(v, dict) else v for k, v in self.resources.items()}
                 self.utilities = {}
+                self.load_default_utility()
                 self.restore_non_serializable_objects()
                 return self
             

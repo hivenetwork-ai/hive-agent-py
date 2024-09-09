@@ -92,6 +92,27 @@ def llm_from_config(config: Config):
     else:
         logger.info("Default OpenAI model selected")
         return _create_llm("OpenAI", config)
+    
+def llm_from_config_without_agent(config: Config):
+    model = config.get("model")
+    if "gpt" in model:
+        logger.info("OpenAILLM selected")
+        return OpenAILLM(llm=llm_from_config(config))
+    elif 'claude' in model:
+        logger.info("ClaudeLLM selected")
+        return ClaudeLLM(llm=llm_from_config(config))
+    elif 'llama' in model:
+        logger.info("OllamaLLM selected")
+        return OllamaLLM(llm=llm_from_config(config))
+    elif any(keyword in model for keyword in ["mixtral", "mistral", "codestral"]):
+        logger.info("MistralLLM selected")
+        return MistralLLM(llm=llm_from_config(config))
+    else:
+        logger.info("Default OpenAILLM selected")
+        return OpenAILLM(llm=llm_from_config(config))
+
+        
+    return llm_from_config(config)
 
 
 def init_llm_settings(config: Config):
