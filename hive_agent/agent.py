@@ -38,7 +38,6 @@ from llama_index.core.tools import QueryEngineTool, ToolMetadata
 from dotenv import load_dotenv
 from hive_agent.config import Config
 from hive_agent.utils import tools_from_funcs
-from hive_agent.llms.utils import llm_from_config_without_agent
 import uuid
 from hive_agent.sdk_context import SDKContext
 
@@ -88,7 +87,7 @@ class HiveAgent:
         self.description = description
         self.sdk_context = sdk_context if sdk_context is not None else SDKContext(config_path = config_path)
         self.__config = self.sdk_context.get_config(self.name)
-        self.__llm = llm if llm is not None else llm_from_config_without_agent(self.__config)
+        self.__llm = llm if llm is not None else None
 
         self.__optional_dependencies: dict[str, bool] = {}
         self.__swarm_mode = swarm_mode
@@ -313,6 +312,7 @@ class HiveAgent:
         if self.__llm is not None:
             print(f"using provided llm: {type(self.__llm)}")
             self.__agent = self.__llm.agent
+            
         else:
             model = self.__config.get("model")
             enable_multi_modal = self.__config.get("enable_multi_modal")

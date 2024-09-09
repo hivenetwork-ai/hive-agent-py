@@ -88,9 +88,22 @@ To use a configuration file with your `HiveAgent`, follow these steps:
 
    - Create a TOML file (e.g., `hive_config.toml`) in your project directory. (See [hive_config_example.toml](./hive_config_example.toml)).
 
+2. **Create an SDK Context**:
+
+   - Create an instance of SDKContext with the path to your configuration file.
+   - The SDKContext allows you to manage configurations, resources, and utilities across your Hive Agents more efficiently.
+
+   ```python
+   from hive_agent.sdk_context import SDKContext
+
+   sdk_context = SDKContext(config_path="./hive_config.toml")
+   ```
+
 2. **Specify the Configuration Path**:
 
    - When creating a `HiveAgent` instance, provide the relative or absolute path to your configuration file.
+   - Agent will use the configuration from the SDK Context. If you have one agent you can directly pass the config_path it will create the sdk_context for you.
+
 
    ```python
    from hive_agent import HiveAgent
@@ -104,7 +117,8 @@ To use a configuration file with your `HiveAgent`, follow these steps:
        name="Simple Agent",
        functions=[],
        instruction="your instructions for this agent's goal",
-       config_path=get_config_path("hive_config.toml") # ./hive_config.toml works too
+       sdk_context=sdk_context
+       #config_path=get_config_path("hive_config.toml") # ./hive_config.toml works too  
    )
    ```
 
@@ -219,6 +233,52 @@ if __name__ == "__main__":
 
     The address that initiated the transaction with hash 0x5c504ed432cb51138bcf09aa5e8a410dd4a1e204ef84bfed1be16dfba1b22060 is 0xA1E4380A3B1f749673E270229993eE55F35663b4.
     """
+````
+
+### Creating a Swarm
+
+You can create a swarm of agents to collaborate on complex tasks. Here's an example of how to set up and use a swarm:
+
+````python
+from hive_agent.swarm import HiveSwarm
+from hive_agent.agent import HiveAgent
+from hive_agent.sdk_context import SDKContext
+
+from hive_agent.llms.utils import llm_from_config
+from hive_agent.utils import tools_from_funcs
+from hive_agent.llms.claude import ClaudeLLM
+import asyncio
+
+# Create SDK Context
+sdk_context = SDKContext(config_path="./hive_config_example.toml")
+
+def save_report():
+    return "save_item_to_csv"
+
+def search_on_web():
+    return "search_on_web"
+
+#You can use the default config using default_config or the config of a specific agent by using the get_config method.
+llm = llm_from_config(sdk_context.get_config("target_agent_id"))
+tools = tools_from_funcs([search_on_web])
+claude = ClaudeLLM(llm=llm, tools=tools)
+    
+# Create individual agents
+agent1 = HiveAgent(name="Research Agent", instruction="Conduct research on given topics", sdk_context=sdk_context, functions=[search_on_web], llm=claude)
+agent2 = HiveAgent(name="Analysis Agent", instruction="Analyze data and provide insights", sdk_context=sdk_context, functions=[save_report])
+agent3 = HiveAgent(name="Report Agent", instruction="Compile findings into a report", sdk_context=sdk_context, functions=[])
+
+# Create swarm
+swarm = HiveSwarm(name="Research Team", description="A swarm of agents that collaborate on research tasks",
+                 instruction="Be helpful and collaborative", functions=[], agents=[agent1, agent2, agent3], sdk_context=sdk_context)
+
+
+async def chat_with_swarm():
+    return await swarm.chat("Can you analyze the following data: [1, 2, 3, 4, 5]")
+
+if __name__ == "__main__":
+    asyncio.run(chat_with_swarm())
+
 ````
 
 ### Adding Retriever
