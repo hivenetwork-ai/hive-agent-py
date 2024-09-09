@@ -9,19 +9,19 @@ from hive_agent.llms.llm import LLM
 class OpenAILLM(LLM):
     def __init__(self, llm=None, tools=None, instruction="", tool_retriever=None):
         super().__init__(llm, tools, instruction, tool_retriever)
-        # self.agent = OpenAIAgent.from_tools(
-        #     tools=self.tools,
-        #     system_prompt=self.system_prompt,
-        #     tool_retriever=tool_retriever,
-        #     llm=llm
-        # )
-        self.agent = ReActAgentWorker.from_tools(
+        self.agent = OpenAIAgent.from_tools(
             tools=self.tools,
             system_prompt=self.system_prompt,
+            tool_retriever=tool_retriever,
             llm=llm,
-            verbose=True,
-            tool_retriever=self.tool_retriever,
-        ).as_agent()
+        )
+        # self.agent = ReActAgentWorker.from_tools(
+        #     tools=self.tools,
+        #     system_prompt=self.system_prompt,
+        #     llm=llm,
+        #     verbose=True,
+        #     tool_retriever=self.tool_retriever,
+        # ).as_agent()
 
 
 class OpenAIMultiModalLLM(LLM):
