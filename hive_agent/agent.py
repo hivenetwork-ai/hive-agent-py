@@ -311,7 +311,18 @@ class HiveAgent:
     def _assign_agent(self, tools, tool_retriever):
         if self.__llm is not None:
             print(f"using provided llm: {type(self.__llm)}")
-            self.__agent = self.__llm.agent
+            agent_class = type(self.__llm)
+            llm = self.__llm
+
+            self.sdk_context.set_attributes(
+                id=self.id,
+                llm = llm,
+                tools=tools,
+                tool_retriever=tool_retriever,
+                agent_class=agent_class,
+                instruction=self.instruction
+            )
+            self.__agent = agent_class(llm, tools, self.instruction, tool_retriever).agent
             
         else:
             model = self.__config.get("model")
