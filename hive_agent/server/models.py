@@ -1,8 +1,10 @@
-from typing import List, Optional
+from typing import List, Optional, Dict
 from pydantic import BaseModel
 
 
 class ToolInstallRequest(BaseModel):
-    url: str
+    github_url: str
     functions: List[str]
     install_path: Optional[str]
+    github_token: Optional[str] = None
+    env_vars: Optional[Dict[str, str]] = None

@@ -1,3 +1,4 @@
+from llama_index.core.agent import ReActAgentWorker
 from llama_index.agent.openai import OpenAIAgent  # type: ignore
 from llama_index.core.agent.react_multimodal.step import MultimodalReActAgentWorker
 from llama_index.core.settings import Settings
@@ -12,8 +13,15 @@ class OpenAILLM(LLM):
             tools=self.tools,
             system_prompt=self.system_prompt,
             tool_retriever=tool_retriever,
-            llm=llm
+            llm=llm,
         )
+        # self.agent = ReActAgentWorker.from_tools(
+        #     tools=self.tools,
+        #     system_prompt=self.system_prompt,
+        #     llm=llm,
+        #     verbose=True,
+        #     tool_retriever=self.tool_retriever,
+        # ).as_agent()
 
 
 class OpenAIMultiModalLLM(LLM):

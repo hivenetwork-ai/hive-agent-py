@@ -14,32 +14,28 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from llama_index.agent.openai import OpenAIAgent  # type: ignore   # noqa
 from llama_index.core.agent import FunctionCallingAgentWorker, AgentRunner  # noqa
+from llama_index.core.llms import ChatMessage, MessageRole
+from llama_index.core.objects import ObjectIndex
+from llama_index.core.tools import QueryEngineTool, ToolMetadata
 
+from hive_agent.chat import ChatManager
 from hive_agent.llms.llm import LLM
 from hive_agent.llms.openai import OpenAIMultiModalLLM, OpenAILLM
 from hive_agent.llms.claude import ClaudeLLM
 from hive_agent.llms.mistral import MistralLLM
 from hive_agent.llms.ollama import OllamaLLM
 from hive_agent.llms.utils import llm_from_config
-
-from llama_index.core.llms import ChatMessage
-
+from hive_agent.sdk_context import SDKContext
 from hive_agent.server.models import ToolInstallRequest
 from hive_agent.server.routes import setup_routes, files
 from hive_agent.tools.agent_db import get_db_schemas, text_2_sql
-
 from hive_agent.tools.retriever.base_retrieve import RetrieverBase, IndexStore, supported_exts, index_base_dir
-
 from hive_agent.tools.retriever.chroma_retrieve import ChromaRetriever
 from hive_agent.tools.retriever.pinecone_retrieve import PineconeRetriever
-from llama_index.core.objects import ObjectIndex
-from llama_index.core.tools import QueryEngineTool, ToolMetadata
+from hive_agent.utils import tools_from_funcs
 
 from dotenv import load_dotenv
-from hive_agent.config import Config
-from hive_agent.utils import tools_from_funcs
 import uuid
-from hive_agent.sdk_context import SDKContext
 
 load_dotenv()
 
@@ -72,6 +68,7 @@ class HiveAgent:
             retrieval_tool="basic",
             load_index_file=False,
             swarm_mode=False,
+            chat_only_mode=False,
             sdk_context: Optional[SDKContext] = None
     ):
         self.id = agent_id if agent_id != "" else str(uuid.uuid4())
@@ -85,12 +82,13 @@ class HiveAgent:
         self.instruction = instruction
         self.role = role
         self.description = description
-        self.sdk_context = sdk_context if sdk_context is not None else SDKContext(config_path = config_path)
+        self.sdk_context = sdk_context if sdk_context is not None else SDKContext(config_path=config_path)
         self.__config = self.sdk_context.get_config(self.name)
         self.__llm = llm if llm is not None else None
 
         self.__optional_dependencies: dict[str, bool] = {}
         self.__swarm_mode = swarm_mode
+        self.__chat_only_mode = chat_only_mode
         self.retrieve = retrieve
         self.required_exts = required_exts
         self.retrieval_tool = retrieval_tool
@@ -137,7 +135,7 @@ class HiveAgent:
             self.wallet_store = None
             self.logger.warning("'web3' extras not installed. Web3-related functionality will not be available.")
 
-        if self.__swarm_mode is False:
+        if self.__swarm_mode is False and self.__chat_only_mode is False:
             self.__setup_server()
 
     def __setup_server(self):
@@ -148,6 +146,7 @@ class HiveAgent:
         @self.__app.post("/api/v1/install_tools")
         async def install_tool(tools: List[ToolInstallRequest]):
             try:
+                print(f"now installing tools:\n{tools}")
                 self.install_tools(tools)
                 return {"status": "Tools installed successfully"}
             except Exception as e:
@@ -186,6 +185,22 @@ class HiveAgent:
             loop.run_until_complete(self.run_server())
         except Exception as e:
             logging.error(f"An error occurred in the main event loop: {e}", exc_info=True)
+
+    async def chat(
+            self,
+            prompt: str,
+            user_id="default_user",
+            session_id="default_chat",
+    ):
+        chat_manager = ChatManager(self.__agent, user_id=user_id, session_id=session_id)
+        last_message = ChatMessage(role=MessageRole.USER, content=prompt)
+        response = await chat_manager.generate_response(
+            db_manager=None,
+            messages=[],
+            last_message=last_message,
+            image_document_paths=[]
+        )
+        return response
 
     def chat_history(self) -> List[ChatMessage]:
         return self.__agent.chat_history
@@ -227,30 +242,30 @@ class HiveAgent:
             self.index_store = IndexStore.load_from_file()
         else:
             self.index_store = IndexStore.get_instance()
-        
+
         if is_base_dir_not_empty and self.retrieve:
             self.add_batch_indexes()
 
     def add_batch_indexes(self):
-    
+
         if "basic" in self.retrieval_tool:
             retriever = RetrieverBase()
-            index,file_names = retriever.create_basic_index()
+            index, file_names = retriever.create_basic_index()
             self.index_store.add_index(retriever.name, index, file_names)
 
         if "chroma" in self.retrieval_tool:
             chroma_retriever = ChromaRetriever()
-            index,file_names = chroma_retriever.create_index()
+            index, file_names = chroma_retriever.create_index()
             self.index_store.add_index(chroma_retriever.name, index, file_names)
 
         if "pinecone-serverless" in self.retrieval_tool:
             pinecone_retriever = PineconeRetriever()
-            index,file_names = pinecone_retriever.create_serverless_index()
+            index, file_names = pinecone_retriever.create_serverless_index()
             self.index_store.add_index(pinecone_retriever.name, index, file_names)
 
         if "pinecone-pod" in self.retrieval_tool:
             pinecone_retriever = PineconeRetriever()
-            index,file_names = pinecone_retriever.create_pod_index()
+            index, file_names = pinecone_retriever.create_pod_index()
             self.index_store.add_index(pinecone_retriever.name, index, file_names)
 
             self.index_store.save_to_file()
@@ -258,15 +273,15 @@ class HiveAgent:
     def get_tools(self):
 
         custom_tools = tools_from_funcs(self.functions)
-        
+
         self.sdk_context.load_default_utility()
 
         def _text_2_sql(query: str):
             return text_2_sql(self.sdk_context, query)
-        
+
         def _get_db_schemas():
             return get_db_schemas(self.sdk_context)
-        
+
         system_tools = tools_from_funcs([
             _text_2_sql,
             _get_db_schemas
@@ -287,12 +302,13 @@ class HiveAgent:
                 index_files = index_store.get_index_files(index_name)
                 query_engine_tools.append(
                     QueryEngineTool(
-                        query_engine = index_store.get_index(index_name).as_query_engine(),
-                        metadata=ToolMetadata(name=index_name+'_tool',
-                                              description=("Useful for questions related to specific aspects of documents"
-                                              f" {index_files}")
-                                                                                                            )))
-            
+                        query_engine=index_store.get_index(index_name).as_query_engine(),
+                        metadata=ToolMetadata(name=index_name + '_tool',
+                                              description=("Useful for questions related to specific aspects of "
+                                                           "documents"
+                                                           f" {index_files}")
+                                              )))
+
             tools = tools + query_engine_tools
 
             vectorstore_object = ObjectIndex.from_objects(
@@ -304,7 +320,7 @@ class HiveAgent:
             self._assign_agent(tools, tool_retriever)
         else:
             self._assign_agent(tools, tool_retriever)
-    
+
     def recreate_agent(self):
         return self.init_agent()
 
@@ -316,14 +332,14 @@ class HiveAgent:
 
             self.sdk_context.set_attributes(
                 id=self.id,
-                llm = llm,
+                llm=llm,
                 tools=tools,
                 tool_retriever=tool_retriever,
                 agent_class=agent_class,
                 instruction=self.instruction
             )
             self.__agent = agent_class(llm, tools, self.instruction, tool_retriever).agent
-            
+
         else:
             model = self.__config.get("model")
             enable_multi_modal = self.__config.get("enable_multi_modal")
@@ -344,7 +360,7 @@ class HiveAgent:
 
             self.sdk_context.set_attributes(
                 id=self.id,
-                llm = llm,
+                llm=llm,
                 tools=tools,
                 tool_retriever=tool_retriever,
                 agent_class=agent_class,
@@ -357,25 +373,38 @@ class HiveAgent:
         self.functions.append(function_tool)
         self.recreate_agent()
 
-    def install_tools(self, tools: List[ToolInstallRequest], install_path="/tmp"):
+    def install_tools(self, tools: List[ToolInstallRequest], install_path="hive-agent-data/tools"):
         """
         Install tools from a list of tool configurations.
 
         :param install_path: Path to the folder where the tools are installed
-        :param tools: List of dictionaries where each dictionary has:
-                      - 'url': the GitHub URL of the tool repository.
+        :param tools: List of ToolInstallRequest objects where each contains:
+                      - 'github_url': the GitHub URL of the tool repository.
                       - 'functions': list of paths to the functions to import.
+                      - 'install_path': optional path where to install the tools.
+                      - 'github_token': optional GitHub token for private repositories.
+                      - 'env_vars': optional environment variables required for the tool to run.
         """
+        os.makedirs(install_path, exist_ok=True)
+
         for tool in tools:
-            url = tool.url
+            if tool.env_vars is not None:
+                for key, value in tool.env_vars:
+                    os.environ[key] = value
+
+            github_url = tool.github_url
             functions = tool.functions
             tool_install_path = install_path
             if tool.install_path is not None:
                 tool_install_path = tool.install_path
 
-            repo_dir = os.path.join(tool_install_path, os.path.basename(url))
+            if tool.github_token:
+                url_with_token = tool.url.replace("https://", f"https://{tool.github_token}@")
+                github_url = url_with_token
+
+            repo_dir = os.path.join(tool_install_path, os.path.basename(github_url))
             if not os.path.exists(repo_dir):
-                subprocess.run(["git", "clone", url, repo_dir], check=True)
+                subprocess.run(["git", "clone", github_url, repo_dir], check=True)
 
             for func_path in functions:
                 module_name, func_name = func_path.rsplit(".", 1)
@@ -390,4 +419,3 @@ class HiveAgent:
                 print(f"Installed function: {func_name} from {module_name}")
 
         self.recreate_agent()
-    
