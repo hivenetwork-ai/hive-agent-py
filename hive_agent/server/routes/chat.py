@@ -1,24 +1,21 @@
 import logging
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 
-from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request, UploadFile, status
-from fastapi.responses import StreamingResponse
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile, status
 from hive_agent.chat import ChatManager
 from hive_agent.chat.schemas import ChatData, ChatHistorySchema
 from hive_agent.database.database import DatabaseManager, get_db
-from hive_agent.filestore import BASE_DIR, FileStore
 from hive_agent.sdk_context import SDKContext
+from hive_agent.server.routes.files import insert_files_to_index
 from langtrace_python_sdk import inject_additional_attributes  # type: ignore   # noqa
-from llama_index.agent.openai import OpenAIAgent  # type: ignore
 from llama_index.core.llms import ChatMessage, MessageRole
 from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-file_store = FileStore(BASE_DIR)
 
 
 ALLOWED_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff"}
@@ -39,19 +36,8 @@ def setup_chat_routes(router: APIRouter, id, sdk_context: SDKContext):
             )
         return last_message, [ChatMessage(role=m.role, content=m.content) for m in chat_data.messages]
 
-    async def process_llm_response(
-        request: Request, chat_manager: ChatManager, last_message_content: str, messages: List[ChatMessage]
-    ):
-        async def event_generator():
-            async for token in response.async_response_gen():
-                if await request.is_disconnected():
-                    break
-                yield token
-
-        # if isinstance(chat_manager.llm, OpenAIAgent):
-        response = await chat_manager.llm.astream_chat(last_message_content, messages)
-        return StreamingResponse(event_generator(), media_type="text/plain")
-        # return None
+    def is_valid_image(file_path: str) -> bool:
+        return Path(file_path).suffix.lower() in ALLOWED_IMAGE_EXTENSIONS
 
     @router.post("/chat")
     async def chat(
@@ -59,7 +45,7 @@ def setup_chat_routes(router: APIRouter, id, sdk_context: SDKContext):
         user_id: str = Form(...),
         session_id: str = Form(...),
         chat_data: str = Form(...),
-        files: List[UploadFile] = [],
+        files: List[Optional[UploadFile]] = File(None),
         db: AsyncSession = Depends(get_db),
     ):
         try:
@@ -70,42 +56,29 @@ def setup_chat_routes(router: APIRouter, id, sdk_context: SDKContext):
                 detail=f"Chat data is malformed: {e.json()}",
             )
 
-        if len(files) == 0:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="No files provided",
-            )
-
-        attributes = sdk_context.get_attributes(id, "llm", "agent_class", "tools", "instruction", "tool_retriever")
+        attributes = sdk_context.get_attributes(
+            id, "llm", "agent_class", "tools", "instruction", "tool_retriever", "enable_multi_modal"
+        )
         llm_instance = attributes["agent_class"](
             attributes["llm"], attributes["tools"], attributes["instruction"], attributes["tool_retriever"]
         ).agent
 
-        chat_manager = ChatManager(llm_instance, user_id=user_id, session_id=session_id)
+        chat_manager = ChatManager(
+            llm_instance, user_id=user_id, session_id=session_id, enable_multi_modal=attributes["enable_multi_modal"]
+        )
         db_manager = DatabaseManager(db)
 
         last_message, messages = await validate_chat_data(chat_data_parsed)
 
         stored_files = []
+        if files is not None and len(files) > 0:
+            stored_files = await insert_files_to_index(files, id, sdk_context)
 
-        for file in files:
-            if file.content_type is None:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"File {file.filename} has no content type",
-                )
-            stored_files.append(f"{BASE_DIR}/{await file_store.save_file(file)}")
+        image_files = [file for file in stored_files if is_valid_image(file)]
 
-        image_files = [file for file in stored_files if Path(file).suffix.lower() in ALLOWED_IMAGE_EXTENSIONS]
-
-        if len(image_files) > 0:
-            return await inject_additional_attributes(
-                lambda: chat_manager.generate_response(db_manager, last_message, image_files),
-            )
-        else:
-            return await inject_additional_attributes(
-                lambda: process_llm_response(request, chat_manager, str(last_message.content), messages),
-            )
+        return await inject_additional_attributes(
+            lambda: chat_manager.generate_response(db_manager, messages, last_message, image_files),
+        )
 
     @router.get("/chat_history", response_model=List[ChatHistorySchema])
     async def get_chat_history(

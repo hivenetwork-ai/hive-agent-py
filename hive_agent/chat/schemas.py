@@ -1,4 +1,3 @@
-from enum import Enum
 from typing import List
 
 from llama_index.core.llms import MessageRole
@@ -20,13 +19,3 @@ class ChatHistorySchema(BaseModel):
     message: str
     role: str
     timestamp: str
-
-
-class MediaType(Enum):
-    FILE_NAME = "file_name"
-    URL = "url"
-
-
-class MediaReference(BaseModel):
-    type: MediaType
-    value: str

@@ -1,15 +1,16 @@
-from fastapi import APIRouter, UploadFile, File, HTTPException
-from typing import List
 import logging
-from hive_agent.filestore import FileStore, BASE_DIR
+from typing import List
+
+from fastapi import APIRouter, File, HTTPException, UploadFile
+from hive_agent.filestore import BASE_DIR, FileStore
 
 # TODO: get log level from config
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-from hive_agent.tools.retriever.base_retrieve import IndexStore, RetrieverBase
 from hive_agent.sdk_context import SDKContext
+from hive_agent.tools.retriever.base_retrieve import IndexStore, RetrieverBase
 
 ALLOWED_FILE_TYPES = [
     "application/json",
@@ -21,7 +22,7 @@ ALLOWED_FILE_TYPES = [
     "image/png",
     "application/msword",
     "application/vnd.ms-excel",
-    "text/markdown"
+    "text/markdown",
 ]
 
 file_store = FileStore(BASE_DIR)
@@ -29,59 +30,62 @@ file_store = FileStore(BASE_DIR)
 index_store = IndexStore.get_instance()
 
 
-def setup_files_routes(router: APIRouter,  id: str, sdk_context: SDKContext):
+async def insert_files_to_index(files: List[UploadFile], id: str, sdk_context: SDKContext):
+    saved_files = []
+    for file in files:
+        if not file.content_type:
+            logger.warning(f"File {file.filename} has no content type.")
+            raise HTTPException(status_code=400, detail="File content type is missing.")
+
+        if file.content_type not in ALLOWED_FILE_TYPES:
+            logger.warning(f"Disallowed file type upload attempted: {file.content_type}")
+            raise HTTPException(
+                status_code=400,
+                detail=f"File type {file.content_type} is not allowed.",
+            )
+        try:
+            agent = sdk_context.get_resource(id)
+            filename = await file_store.save_file(file)
+            file_path = "{BASE_DIR}/{filename}".format(BASE_DIR=BASE_DIR, filename=filename)
+            saved_files.append(file_path)
+
+            if "BaseRetriever" in index_store.list_indexes():
+                index = index_store.get_index("BaseRetriever")
+                RetrieverBase().insert_documents(index, [file_path])
+                index_store.update_index("BaseRetriever", index)
+                index_store.insert_index_files("BaseRetriever", [filename])
+                logger.info("Inserting data to existing basic index")
+                logger.info(f"Index: {index_store.list_indexes()}")
+                agent.recreate_agent()
+                index_store.save_to_file()
+
+            else:
+                retriever = RetrieverBase()
+                index, file_names = retriever.create_basic_index([file_path])
+                index_store.add_index(retriever.name, index, file_names)
+                logger.info("Inserting data to new basic index")
+                logger.info(f"Index: {index_store.list_indexes()}")
+                agent.recreate_agent()
+                index_store.save_to_file()
+
+        except ValueError as e:
+            logger.error(f"Value error: {e}")
+            raise HTTPException(status_code=400, detail=str(e))
+        except IOError as e:
+            logger.error(f"I/O error: {e}")
+            raise HTTPException(status_code=500, detail=str(e))
+        finally:
+            await file.close()
+            logger.info(f"Closed file {file.filename}")
+
+    return saved_files
+
+
+def setup_files_routes(router: APIRouter, id: str, sdk_context: SDKContext):
     @router.post("/uploadfiles/")
     async def create_upload_files(files: List[UploadFile] = File(...)):
-        saved_files = []
-        for file in files:
-            if not file.content_type:
-                logger.warning(f"File {file.filename} has no content type.")
-                raise HTTPException(status_code=400, detail="File content type is missing.")
 
-            if file.content_type not in ALLOWED_FILE_TYPES:
-                logger.warning(f"Disallowed file type upload attempted: {file.content_type}")
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"File type {file.content_type} is not allowed.",
-                )
-
-            try:
-                agent = sdk_context.get_resource(id)
-                filename = await file_store.save_file(file)
-                saved_files.append(filename)
-
-                if "BaseRetriever" in index_store.list_indexes():
-                    index = index_store.get_index("BaseRetriever")
-                    RetrieverBase().insert_documents(
-                        index, file_path=["{BASE_DIR}/{filename}".format(BASE_DIR=BASE_DIR, filename=filename)]
-                    )
-                    index_store.update_index("BaseRetriever", index)
-                    index_store.insert_index_files("BaseRetriever", [filename])
-                    logger.info("Inserting data to existing basic index")
-                    logger.info(f"Index: {index_store.list_indexes()}")
-                    agent.recreate_agent()
-                    index_store.save_to_file()
-
-                else:
-                    retriever = RetrieverBase()
-                    index, file_names = retriever.create_basic_index(
-                        file_path=["{BASE_DIR}/{filename}".format(BASE_DIR=BASE_DIR, filename=filename)]
-                    )
-                    index_store.add_index(retriever.name, index, file_names)
-                    logger.info("Inserting data to new basic index")
-                    logger.info(f"Index: {index_store.list_indexes()}")
-                    agent.recreate_agent()
-                    index_store.save_to_file()
-
-            except ValueError as e:
-                logger.error(f"Value error: {e}")
-                raise HTTPException(status_code=400, detail=str(e))
-            except IOError as e:
-                logger.error(f"I/O error: {e}")
-                raise HTTPException(status_code=500, detail=str(e))
-            finally:
-                await file.close()
-                logger.info(f"Closed file {file.filename}")
+        saved_files = await insert_files_to_index(files, id, sdk_context)
 
         logger.info(f"Uploaded files: {saved_files}")
         return {"filenames": saved_files}
