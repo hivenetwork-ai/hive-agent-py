@@ -196,7 +196,6 @@ class HiveAgent:
         last_message = ChatMessage(role=MessageRole.USER, content=prompt)
         response = await chat_manager.generate_response(
             db_manager=None,
-            messages=[],
             last_message=last_message,
             image_document_paths=[]
         )

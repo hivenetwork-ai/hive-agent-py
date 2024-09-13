@@ -1,7 +1,8 @@
 from enum import Enum
-from typing import List, Optional
-from pydantic import BaseModel
+from typing import List
+
 from llama_index.core.llms import MessageRole
+from pydantic import BaseModel
 
 
 class Message(BaseModel):
@@ -29,10 +30,3 @@ class MediaType(Enum):
 class MediaReference(BaseModel):
     type: MediaType
     value: str
-
-
-class ChatRequest(BaseModel):
-    user_id: str
-    session_id: str
-    chat_data: ChatData
-    media_references: Optional[List[MediaReference]] = None

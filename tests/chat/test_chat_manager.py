@@ -74,7 +74,7 @@ async def test_generate_response_with_generic_llm(agent, db_manager):
     chat_manager = ChatManager(agent, user_id="123", session_id="abc")
     user_message = ChatMessage(role=MessageRole.USER, content="Hello!")
 
-    response = await chat_manager.generate_response(db_manager, [user_message], user_message, [])
+    response = await chat_manager.generate_response(db_manager, user_message, [])
     assert response == "chat response"
 
     messages = await chat_manager.get_messages(db_manager)
@@ -115,7 +115,7 @@ async def test_generate_response_with_openai_multimodal(multi_modal_agent, db_ma
         user_message = ChatMessage(role=MessageRole.USER, content="Hello!")
         image_document_paths = ["image1.png", "image2.png"]
 
-        response = await chat_manager.generate_response(db_manager, [user_message], user_message, image_document_paths)
+        response = await chat_manager.generate_response(db_manager, user_message, image_document_paths)
 
         assert response == "multimodal response"
 
@@ -157,7 +157,7 @@ async def test_generate_response_with_openai_agent(agent, db_manager):
         chat_manager = ChatManager(agent, user_id="123", session_id="abc")
         user_message = ChatMessage(role=MessageRole.USER, content="Hello!")
 
-        response = await chat_manager.generate_response(db_manager, [user_message], user_message, [])
+        response = await chat_manager.generate_response(db_manager, user_message, [])
         assert response == "chat response"
 
         messages = await chat_manager.get_messages(db_manager)

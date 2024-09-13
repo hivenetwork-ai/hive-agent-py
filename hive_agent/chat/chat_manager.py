@@ -2,15 +2,12 @@ import os
 from datetime import datetime, timezone
 from typing import Any, List, Optional
 
-from llama_index.agent.openai import OpenAIAgent  # type: ignore
-from llama_index.core.llms import ChatMessage, MessageRole
-from llama_index.multi_modal_llms.openai import OpenAIMultiModal  # type: ignore   # noqa
-from llama_index.core.schema import ImageDocument
-from llama_index.core.settings import Settings
-from llama_index.core.agent.runner.base import AgentRunner
-from llama_index.core.memory import ChatMemoryBuffer
-
 from hive_agent.database.database import DatabaseManager
+from llama_index.agent.openai import OpenAIAgent
+from llama_index.core.agent.runner.base import AgentRunner
+from llama_index.core.llms import ChatMessage, MessageRole
+from llama_index.core.memory import ChatMemoryBuffer
+from llama_index.core.schema import ImageDocument
 
 
 class ChatManager:
@@ -64,7 +61,6 @@ class ChatManager:
     async def generate_response(
         self,
         db_manager: Optional[DatabaseManager],
-        messages: List[ChatMessage],
         last_message: ChatMessage,
         image_document_paths: List[str],
     ) -> str:
@@ -74,9 +70,9 @@ class ChatManager:
             chat_history = await self.get_messages(db_manager)
             await self.add_message(db_manager, last_message.role.value, last_message.content)
 
-        if isinstance(Settings.llm, OpenAIMultiModal):
+        if len(image_document_paths) > 0:
             assistant_message = await self._handle_openai_multimodal(last_message, chat_history, image_document_paths)
-        elif isinstance(Settings.llm, OpenAIAgent):
+        elif isinstance(self.llm, OpenAIAgent):
             assistant_message = await self._handle_openai_agent(last_message, chat_history)
         else:
             assistant_message = await self._handle_generic_llm(last_message, chat_history)

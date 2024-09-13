@@ -1,24 +1,27 @@
 import logging
-import os
 from datetime import datetime, timezone
-from typing import List, Optional
+from pathlib import Path
+from typing import List
 
-from fastapi import APIRouter, HTTPException, Depends, Request, Query, status, UploadFile, File, Form
+from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request, UploadFile, status
 from fastapi.responses import StreamingResponse
+from hive_agent.chat import ChatManager
+from hive_agent.chat.schemas import ChatData, ChatHistorySchema
+from hive_agent.database.database import DatabaseManager, get_db
+from hive_agent.filestore import BASE_DIR, FileStore
+from hive_agent.sdk_context import SDKContext
+from langtrace_python_sdk import inject_additional_attributes  # type: ignore   # noqa
+from llama_index.agent.openai import OpenAIAgent  # type: ignore
+from llama_index.core.llms import ChatMessage, MessageRole
 from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
-from hive_agent.database.database import get_db, DatabaseManager
-from hive_agent.chat import ChatManager
-from hive_agent.chat.schemas import ChatHistorySchema, ChatRequest, ChatData
-from llama_index.core.llms import ChatMessage, MessageRole
-from llama_index.agent.openai import OpenAIAgent  # type: ignore
-from hive_agent.filestore import FileStore, BASE_DIR
-from hive_agent.sdk_context import SDKContext
-from langtrace_python_sdk import inject_additional_attributes
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 file_store = FileStore(BASE_DIR)
+
+
+ALLOWED_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff"}
 
 
 def setup_chat_routes(router: APIRouter, id, sdk_context: SDKContext):
@@ -45,64 +48,18 @@ def setup_chat_routes(router: APIRouter, id, sdk_context: SDKContext):
                     break
                 yield token
 
-        if isinstance(chat_manager.llm, OpenAIAgent):
-            response = await chat_manager.llm.astream_chat(last_message_content, messages)
-            return StreamingResponse(event_generator(), media_type="text/plain")
-        return None
-
-    async def generate_response_or_stream(
-        chat_manager: ChatManager,
-        db_manager: DatabaseManager,
-        request: Request,
-        last_chat_message: ChatMessage,
-        messages: List[ChatMessage],
-        file_paths: Optional[List[str]] = None,
-    ):
-        llm_response = await process_llm_response(request, chat_manager, str(last_chat_message.content), messages)
-        if llm_response:
-            return llm_response
-        return await chat_manager.generate_response(db_manager, messages, last_chat_message, file_paths or [])
+        # if isinstance(chat_manager.llm, OpenAIAgent):
+        response = await chat_manager.llm.astream_chat(last_message_content, messages)
+        return StreamingResponse(event_generator(), media_type="text/plain")
+        # return None
 
     @router.post("/chat")
     async def chat(
         request: Request,
-        chat_request: ChatRequest,
-        db: AsyncSession = Depends(get_db),
-    ):
-        attributes = sdk_context.get_attributes(id, 'llm', 'agent_class', 'tools', 'instruction', 'tool_retriever')
-        llm_instance = attributes['agent_class'](attributes['llm'], attributes['tools'], attributes['instruction'], attributes['tool_retriever']).agent
-
-        chat_manager = ChatManager(llm_instance, user_id=chat_request.user_id, session_id=chat_request.session_id)
-        db_manager = DatabaseManager(db)
-
-        last_message, messages = await validate_chat_data(chat_request.chat_data)
-
-        file_paths = (
-            [f"{BASE_DIR}/{media.value}" for media in chat_request.media_references if media.type.value == "file_name"]
-            if chat_request.media_references
-            else []
-        )
-
-        return await inject_additional_attributes(lambda: generate_response_or_stream(
-            chat_manager,
-            db_manager,
-            request,
-            ChatMessage(role=last_message.role, content=last_message.content),
-            messages,
-            file_paths,
-        ), {
-            # "agent_id": os.getenv("HIVE_AGENT_ID", ""),
-            "user_id": chat_request.user_id,
-            # "session_id": chat_request.session_id
-        })
-
-    @router.post("/chat_media")
-    async def chat_media(
-        request: Request,
         user_id: str = Form(...),
         session_id: str = Form(...),
         chat_data: str = Form(...),
-        files: List[UploadFile] = File(...),
+        files: List[UploadFile] = [],
         db: AsyncSession = Depends(get_db),
     ):
         try:
@@ -118,29 +75,37 @@ def setup_chat_routes(router: APIRouter, id, sdk_context: SDKContext):
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="No files provided",
             )
-        
-        attributes = sdk_context.get_attributes(id, 'llm', 'agent_class', 'tools', 'instruction', 'tool_retriever')
-        llm_instance = attributes['agent_class'](attributes['llm'], attributes['tools'], attributes['instruction'], attributes['tool_retriever']).agent
+
+        attributes = sdk_context.get_attributes(id, "llm", "agent_class", "tools", "instruction", "tool_retriever")
+        llm_instance = attributes["agent_class"](
+            attributes["llm"], attributes["tools"], attributes["instruction"], attributes["tool_retriever"]
+        ).agent
 
         chat_manager = ChatManager(llm_instance, user_id=user_id, session_id=session_id)
         db_manager = DatabaseManager(db)
 
         last_message, messages = await validate_chat_data(chat_data_parsed)
 
-        file_paths = [f"{BASE_DIR}/{await file_store.save_file(file)}" for file in files]
+        stored_files = []
 
-        return await inject_additional_attributes(lambda: generate_response_or_stream(
-            chat_manager,
-            db_manager,
-            request,
-            ChatMessage(role=last_message.role, content=last_message.content),
-            messages,
-            file_paths,
-        ), {
-            # "agent_id": os.getenv("HIVE_AGENT_ID", ""),
-            "user_id": user_id,
-            # "session_id": session_id
-        })
+        for file in files:
+            if file.content_type is None:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"File {file.filename} has no content type",
+                )
+            stored_files.append(f"{BASE_DIR}/{await file_store.save_file(file)}")
+
+        image_files = [file for file in stored_files if Path(file).suffix.lower() in ALLOWED_IMAGE_EXTENSIONS]
+
+        if len(image_files) > 0:
+            return await inject_additional_attributes(
+                lambda: chat_manager.generate_response(db_manager, last_message, image_files),
+            )
+        else:
+            return await inject_additional_attributes(
+                lambda: process_llm_response(request, chat_manager, str(last_message.content), messages),
+            )
 
     @router.get("/chat_history", response_model=List[ChatHistorySchema])
     async def get_chat_history(
@@ -148,9 +113,11 @@ def setup_chat_routes(router: APIRouter, id, sdk_context: SDKContext):
         session_id: str = Query(...),
         db: AsyncSession = Depends(get_db),
     ):
-        
-        attributes = sdk_context.get_attributes(id, 'llm', 'agent_class', 'tools', 'instruction', 'tool_retriever')
-        llm_instance = attributes['agent_class'](attributes['llm'], attributes['tools'], attributes['instruction'], attributes['tool_retriever']).agent
+
+        attributes = sdk_context.get_attributes(id, "llm", "agent_class", "tools", "instruction", "tool_retriever")
+        llm_instance = attributes["agent_class"](
+            attributes["llm"], attributes["tools"], attributes["instruction"], attributes["tool_retriever"]
+        ).agent
 
         chat_manager = ChatManager(llm_instance, user_id=user_id, session_id=session_id)
         db_manager = DatabaseManager(db)
@@ -175,8 +142,10 @@ def setup_chat_routes(router: APIRouter, id, sdk_context: SDKContext):
     @router.get("/all_chats")
     async def get_all_chats(user_id: str = Query(...), db: AsyncSession = Depends(get_db)):
 
-        attributes = sdk_context.get_attributes(id, 'llm', 'agent_class', 'tools', 'instruction', 'tool_retriever')
-        llm_instance = attributes['agent_class'](attributes['llm'], attributes['tools'], attributes['instruction'], attributes['tool_retriever']).agent
+        attributes = sdk_context.get_attributes(id, "llm", "agent_class", "tools", "instruction", "tool_retriever")
+        llm_instance = attributes["agent_class"](
+            attributes["llm"], attributes["tools"], attributes["instruction"], attributes["tool_retriever"]
+        ).agent
 
         chat_manager = ChatManager(llm_instance, user_id=user_id, session_id="")
         db_manager = DatabaseManager(db)

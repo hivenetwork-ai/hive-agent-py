@@ -113,10 +113,3 @@ def llm_from_config_without_agent(config: Config):
 
         
     return llm_from_config(config)
-
-
-def init_llm_settings(config: Config):
-    Settings.llm = llm_from_config(config)
-    Settings.chunk_size = 1024
-    Settings.chunk_overlap = 20
-    logger.info("LLM settings initialized")
