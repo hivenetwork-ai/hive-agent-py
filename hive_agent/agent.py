@@ -47,24 +47,24 @@ class HiveAgent:
     __agent: AgentRunner
 
     def __init__(
-            self,
-            name: str,
-            functions: List[Callable],
-            llm: Optional[LLM] = None,
-            config_path="./hive_config_example.toml",
-            host="0.0.0.0",
-            port=8000,
-            instruction="",
-            role="",
-            description="",
-            agent_id=os.getenv("HIVE_AGENT_ID", ""),
-            retrieve=False,
-            required_exts=supported_exts,
-            retrieval_tool="basic",
-            load_index_file=False,
-            swarm_mode=False,
-            chat_only_mode=False,
-            sdk_context: Optional[SDKContext] = None
+        self,
+        name: str,
+        functions: List[Callable],
+        llm: Optional[LLM] = None,
+        config_path="./hive_config_example.toml",
+        host="0.0.0.0",
+        port=8000,
+        instruction="",
+        role="",
+        description="",
+        agent_id=os.getenv("HIVE_AGENT_ID", ""),
+        retrieve=False,
+        required_exts=supported_exts,
+        retrieval_tool="basic",
+        load_index_file=False,
+        swarm_mode=False,
+        chat_only_mode=False,
+        sdk_context: Optional[SDKContext] = None,
     ):
         self.id = agent_id if agent_id != "" else str(uuid.uuid4())
         self.name = name
@@ -189,7 +189,7 @@ class HiveAgent:
     ):
         chat_manager = ChatManager(self.__agent, user_id=user_id, session_id=session_id)
         last_message = ChatMessage(role=MessageRole.USER, content=prompt)
-        response = await chat_manager.generate_response(db_manager=None, messages=[], last_message=last_message)
+        response = await chat_manager.generate_response(db_manager=None, last_message=last_message)
         return response
 
     def chat_history(self) -> List[ChatMessage]:
@@ -326,7 +326,7 @@ class HiveAgent:
                 tools=tools,
                 tool_retriever=tool_retriever,
                 agent_class=agent_class,
-                instruction=self.instruction
+                instruction=self.instruction,
             )
             self.__agent = agent_class(llm, tools, self.instruction, tool_retriever).agent
 

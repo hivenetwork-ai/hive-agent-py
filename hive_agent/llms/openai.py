@@ -1,9 +1,9 @@
-from llama_index.core.agent import ReActAgentWorker
-from llama_index.agent.openai import OpenAIAgent  # type: ignore
-from llama_index.core.agent.react_multimodal.step import MultimodalReActAgentWorker
-from llama_index.core.settings import Settings
-
 from hive_agent.llms.llm import LLM
+from llama_index.agent.openai import OpenAIAgent  # type: ignore
+from llama_index.core.agent import ReActAgentWorker
+from llama_index.core.agent.react_multimodal.step import \
+    MultimodalReActAgentWorker
+from llama_index.core.settings import Settings
 
 
 class OpenAILLM(LLM):
@@ -33,4 +33,5 @@ class OpenAIMultiModalLLM(LLM):
             tool_retriever=self.tool_retriever,
             # llm=self.llm,
             multi_modal_llm=self.llm, 
+            max_iterations=200,
         ).as_agent()

@@ -1,11 +1,11 @@
+from unittest.mock import MagicMock, patch
+
 import pytest
-
-from llama_index.core.llms import ChatMessage, MessageRole
 from hive_agent.chat import ChatManager
-from unittest.mock import patch, MagicMock
-
-from llama_index.multi_modal_llms.openai import OpenAIMultiModal  # type: ignore
 from llama_index.agent.openai import OpenAIAgent  # type: ignore
+from llama_index.core.llms import ChatMessage, MessageRole
+from llama_index.multi_modal_llms.openai import \
+    OpenAIMultiModal  # type: ignore
 
 
 class MockAgent:
@@ -111,7 +111,7 @@ async def test_get_all_chats_for_user(agent, db_manager):
 @pytest.mark.asyncio
 async def test_generate_response_with_openai_multimodal(multi_modal_agent, db_manager):
     with patch("llama_index.core.settings._Settings.llm", new=MagicMock(spec=OpenAIMultiModal)):
-        chat_manager = ChatManager(multi_modal_agent, user_id="123", session_id="abc")
+        chat_manager = ChatManager(multi_modal_agent, user_id="123", session_id="abc", enable_multi_modal=True)
         user_message = ChatMessage(role=MessageRole.USER, content="Hello!")
         image_document_paths = ["image1.png", "image2.png"]
 

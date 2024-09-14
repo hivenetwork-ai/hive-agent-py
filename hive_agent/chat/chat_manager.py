@@ -62,7 +62,6 @@ class ChatManager:
     async def generate_response(
         self,
         db_manager: Optional[DatabaseManager],
-        messages: List[ChatMessage],
         last_message: ChatMessage,
         image_document_paths: Optional[List[str]] = [],
     ) -> str:

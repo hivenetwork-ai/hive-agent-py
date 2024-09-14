@@ -1,12 +1,13 @@
+import json
+from io import BytesIO
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
 from fastapi import APIRouter, FastAPI, status
-from httpx import AsyncClient
-from unittest.mock import AsyncMock, patch, MagicMock
-from io import BytesIO
-
-from llama_index.core.llms import ChatMessage, MessageRole
-from hive_agent.server.routes.chat import setup_chat_routes
 from hive_agent.sdk_context import SDKContext
+from hive_agent.server.routes.chat import setup_chat_routes
+from httpx import AsyncClient
+from llama_index.core.llms import ChatMessage, MessageRole
 
 
 class MockAgent:
@@ -33,7 +34,8 @@ def sdk_context():
         'agent_class': lambda *args: MagicMock(agent=MockAgent()),
         'tools': [],
         'instruction': "",
-        'tool_retriever': None
+        'tool_retriever': None,
+        'enable_multi_modal': False
     }
     return mock_context
 
@@ -55,30 +57,41 @@ async def client(app):
 
 @pytest.mark.asyncio
 async def test_chat_no_messages(client):
-    payload = {"user_id": "user1", "session_id": "session1", "chat_data": {"messages": []}, "media_references": []}
-    response = await client.post("/api/v1/chat", json=payload)
+    form_data = {
+        "user_id": "user1",
+        "session_id": "session1",
+        "chat_data": json.dumps({"messages": []}),
+    }
+    response = await client.post(
+        "/api/v1/chat",
+        data=form_data,
+        files={}
+    )
     assert response.status_code == status.HTTP_400_BAD_REQUEST
     assert "No messages provided" in response.json()["detail"]
 
 
 @pytest.mark.asyncio
 async def test_chat_last_message_not_user(client):
-    payload = {
+    form_data = {
         "user_id": "user1",
         "session_id": "session1",
-        "chat_data": {
+        "chat_data": json.dumps({
             "messages": [
-                {"role": MessageRole.SYSTEM, "content": "System message"},
-                {"role": MessageRole.USER, "content": "User message"},
-                {"role": MessageRole.SYSTEM, "content": "Another system message"},
+                {"role": "system", "content": "System message"},
+                {"role": "user", "content": "User message"},
+                {"role": "system", "content": "Another system message"},
             ]
-        },
-        "media_references": [],
+        }),
     }
-    response = await client.post("/api/v1/chat", json=payload)
+    
+    response = await client.post(
+        "/api/v1/chat",
+        data=form_data,
+        files={}
+    )
     assert response.status_code == status.HTTP_400_BAD_REQUEST
     assert "Last message must be from user" in response.json()["detail"]
-
 
 @pytest.mark.asyncio
 async def test_chat_success(client, agent):
