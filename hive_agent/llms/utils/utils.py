@@ -35,7 +35,7 @@ def _create_llm(llm_type: str, config: Config):
 
     if llm_type == "OpenAI":
         if model.startswith("gpt-4") and enable_multi_modal is True:
-            return OpenAIMultiModal(model, api_key=os.getenv("OPENAI_API_KEY"), max_new_tokens=300)
+            return OpenAIMultiModal(model, request_timeout=timeout, max_new_tokens=300)
         elif "gpt" in model:
             return OpenAI(model=model, request_timeout=timeout)
     elif llm_type == "Anthropic":

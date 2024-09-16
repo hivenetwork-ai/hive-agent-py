@@ -1,23 +1,24 @@
-import os
-import pytest
 import shutil
-from unittest.mock import MagicMock, patch
-from fastapi import FastAPI, APIRouter
-from httpx import AsyncClient
 from io import BytesIO
+from unittest.mock import MagicMock, patch
 
+import pytest
+from fastapi import APIRouter, FastAPI
 from hive_agent.filestore import FileStore
+from hive_agent.sdk_context import SDKContext
 from hive_agent.server.routes.files import setup_files_routes
 from hive_agent.tools.retriever.base_retrieve import IndexStore, RetrieverBase
-from hive_agent.sdk_context import SDKContext
+from httpx import AsyncClient
 
 BASE_DIR = "test_files"
+
 
 @pytest.fixture(scope="module")
 def file_store():
     store = FileStore(BASE_DIR)
     yield store
     shutil.rmtree(BASE_DIR, ignore_errors=True)
+
 
 @pytest.fixture(scope="module")
 def sdk_context():
@@ -27,6 +28,7 @@ def sdk_context():
     context.get_resource.return_value = mock_agent
     return context
 
+
 @pytest.fixture(scope="module")
 def app(file_store, sdk_context):
     fastapi_app = FastAPI()
@@ -35,6 +37,7 @@ def app(file_store, sdk_context):
     fastapi_app.include_router(router)
     return fastapi_app
 
+
 @pytest.fixture
 async def client(app):
     with patch.object(RetrieverBase, "create_basic_index", return_value=(MagicMock(), ["test_file"])), \
@@ -42,6 +45,7 @@ async def client(app):
          patch.object(IndexStore, "save_to_file", MagicMock()):
         async with AsyncClient(app=app, base_url="http://test") as test_client:
             yield test_client
+
 
 @pytest.mark.asyncio
 async def test_list_files(client):
@@ -82,7 +86,7 @@ async def test_create_upload_files(client):
         ]
         response = await client.post("/uploadfiles/", files=files)
         assert response.status_code == 200
-        assert response.json() == {"filenames": ["test.txt"]}
+        assert response.json() == {"filenames": ["hive-agent-data/files/user/test.txt"]}
 
 
 @pytest.mark.asyncio
@@ -93,7 +97,7 @@ async def test_upload_image_jpeg(client):
         ]
         response = await client.post("/uploadfiles/", files=files)
         assert response.status_code == 200
-        assert response.json() == {"filenames": ["test.jpeg"]}
+        assert response.json() == {"filenames": ["hive-agent-data/files/user/test.jpeg"]}
 
 
 @pytest.mark.asyncio
@@ -104,7 +108,7 @@ async def test_upload_image_png(client):
         ]
         response = await client.post("/uploadfiles/", files=files)
         assert response.status_code == 200
-        assert response.json() == {"filenames": ["test.png"]}
+        assert response.json() == {"filenames": ["hive-agent-data/files/user/test.png"]}
 
 
 @pytest.mark.asyncio
@@ -115,7 +119,7 @@ async def test_upload_image_jpg(client):
         ]
         response = await client.post("/uploadfiles/", files=files)
         assert response.status_code == 200
-        assert response.json() == {"filenames": ["test.jpg"]}
+        assert response.json() == {"filenames": ["hive-agent-data/files/user/test.jpg"]}
 
 
 @pytest.mark.asyncio
@@ -126,7 +130,7 @@ async def test_upload_application_pdf(client):
         ]
         response = await client.post("/uploadfiles/", files=files)
         assert response.status_code == 200
-        assert response.json() == {"filenames": ["test.pdf"]}
+        assert response.json() == {"filenames": ["hive-agent-data/files/user/test.pdf"]}
 
 
 @pytest.mark.asyncio
@@ -137,7 +141,7 @@ async def test_upload_application_msword(client):
         ]
         response = await client.post("/uploadfiles/", files=files)
         assert response.status_code == 200
-        assert response.json() == {"filenames": ["test.doc"]}
+        assert response.json() == {"filenames": ["hive-agent-data/files/user/test.doc"]}
 
 
 @pytest.mark.asyncio
@@ -148,7 +152,7 @@ async def test_upload_application_vnd_ms_excel(client):
         ]
         response = await client.post("/uploadfiles/", files=files)
         assert response.status_code == 200
-        assert response.json() == {"filenames": ["test.xls"]}
+        assert response.json() == {"filenames": ["hive-agent-data/files/user/test.xls"]}
 
 
 @pytest.mark.asyncio
@@ -159,7 +163,7 @@ async def test_upload_text_csv(client):
         ]
         response = await client.post("/uploadfiles/", files=files)
         assert response.status_code == 200
-        assert response.json() == {"filenames": ["test.csv"]}
+        assert response.json() == {"filenames": ["hive-agent-data/files/user/test.csv"]}
 
 
 @pytest.mark.asyncio
@@ -170,7 +174,8 @@ async def test_upload_text_markdown(client):
         ]
         response = await client.post("/uploadfiles/", files=files)
         assert response.status_code == 200
-        assert response.json() == {"filenames": ["test.md"]}
+        assert response.json() == {"filenames": ["hive-agent-data/files/user/test.md"]}
+
 
 @pytest.mark.asyncio
 async def test_upload_unsupported_file_type(client):
