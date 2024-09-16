@@ -25,7 +25,7 @@ class OpenAILLM(LLM):
 
 
 class OpenAIMultiModalLLM(LLM):
-    def __init__(self, llm=None, tools=None, instruction="", tool_retriever=None):
+    def __init__(self, llm=None, tools=None, instruction="", tool_retriever=None, max_iterations=10):
         super().__init__(llm, tools, instruction, tool_retriever)
         self.agent = MultimodalReActAgentWorker.from_tools(
             tools=self.tools,
@@ -33,5 +33,5 @@ class OpenAIMultiModalLLM(LLM):
             tool_retriever=self.tool_retriever,
             # llm=self.llm,
             multi_modal_llm=self.llm, 
-            max_iterations=200,
+            max_iterations=max_iterations,
         ).as_agent()

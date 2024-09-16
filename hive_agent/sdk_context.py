@@ -384,7 +384,7 @@ class SDKContext:
         
         :param kwargs: Keyword arguments for attributes to set.
         """
-        valid_attributes = ['llm', 'tools', 'tool_retriever', 'agent_class', 'instruction', 'enable_multi_modal']
+        valid_attributes = ['llm', 'tools', 'tool_retriever', 'agent_class', 'instruction', 'enable_multi_modal', 'max_iterations']
         if id not in self.attributes:
             self.attributes[id] = {}
         for attr, value in kwargs.items():
@@ -400,7 +400,7 @@ class SDKContext:
         :param args: Names of attributes to retrieve.
         :return: A dictionary of requested attributes and their values.
         """
-        valid_attributes = ['llm', 'tools', 'tool_retriever', 'agent_class', 'instruction', 'enable_multi_modal']
+        valid_attributes = ['llm', 'tools', 'tool_retriever', 'agent_class', 'instruction', 'enable_multi_modal', 'max_iterations']
         return {attr: self.attributes[id].get(attr) for attr in args if attr in valid_attributes}
 
     def add_utility(self, utility, utility_type: str, name: str):

@@ -65,6 +65,7 @@ class HiveAgent:
         swarm_mode=False,
         chat_only_mode=False,
         sdk_context: Optional[SDKContext] = None,
+        max_iterations: Optional[int] = 10
     ):
         self.id = agent_id if agent_id != "" else str(uuid.uuid4())
         self.name = name
@@ -80,7 +81,7 @@ class HiveAgent:
         self.sdk_context = sdk_context if sdk_context is not None else SDKContext(config_path=config_path)
         self.__config = self.sdk_context.get_config(self.name)
         self.__llm = llm if llm is not None else None
-
+        self.max_iterations = max_iterations
         self.__optional_dependencies: dict[str, bool] = {}
         self.__swarm_mode = swarm_mode
         self.__chat_only_mode = chat_only_mode
@@ -262,18 +263,7 @@ class HiveAgent:
 
     def get_tools(self):
 
-        custom_tools = tools_from_funcs(self.functions)
-
-        self.sdk_context.load_default_utility()
-
-        def _text_2_sql(query: str):
-            return text_2_sql(self.sdk_context, query)
-
-        def _get_db_schemas():
-            return get_db_schemas(self.sdk_context)
-
-        system_tools = tools_from_funcs([_text_2_sql, _get_db_schemas])
-        tools = custom_tools + system_tools
+        tools = tools_from_funcs(self.functions)
 
         return tools
 
@@ -327,8 +317,12 @@ class HiveAgent:
                 tool_retriever=tool_retriever,
                 agent_class=agent_class,
                 instruction=self.instruction,
+                max_iterations=self.max_iterations
             )
-            self.__agent = agent_class(llm, tools, self.instruction, tool_retriever).agent
+            if agent_class == OpenAIMultiModalLLM:
+                self.__agent = agent_class(llm, tools, self.instruction, tool_retriever, max_iterations=self.max_iterations).agent
+            else:
+                self.__agent = agent_class(llm, tools, self.instruction, tool_retriever).agent
 
         else:
             model = self.__config.get("model")
@@ -356,9 +350,12 @@ class HiveAgent:
                 agent_class=agent_class,
                 instruction=self.instruction,
                 enable_multi_modal=enable_multi_modal,
+                max_iterations=self.max_iterations
             )
-
-            self.__agent = agent_class(llm, tools, self.instruction, tool_retriever).agent
+            if agent_class == OpenAIMultiModalLLM:
+                self.__agent = agent_class(llm, tools, self.instruction, tool_retriever, max_iterations=self.max_iterations).agent
+            else:
+                self.__agent = agent_class(llm, tools, self.instruction, tool_retriever).agent
 
     def add_tool(self, function_tool):
         self.functions.append(function_tool)

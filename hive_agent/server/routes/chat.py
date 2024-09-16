@@ -15,13 +15,25 @@ from langtrace_python_sdk import \
 from llama_index.core.llms import ChatMessage, MessageRole
 from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
-
+from hive_agent.llms.openai import OpenAIMultiModalLLM
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
 ALLOWED_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff"}
 
+
+def get_llm_instance(id,sdk_context: SDKContext):
+    attributes = sdk_context.get_attributes(id, "llm", "agent_class", "tools", "instruction", "tool_retriever", "enable_multi_modal", "max_iterations")
+    if attributes['agent_class'] == OpenAIMultiModalLLM:
+        llm_instance = attributes["agent_class"](
+            attributes["llm"], attributes["tools"], attributes["instruction"], attributes["tool_retriever"], max_iterations=attributes["max_iterations"]
+        ).agent
+    else:
+        llm_instance = attributes["agent_class"](
+            attributes["llm"], attributes["tools"], attributes["instruction"], attributes["tool_retriever"]
+        ).agent
+    return llm_instance, attributes["enable_multi_modal"]
 
 def setup_chat_routes(router: APIRouter, id, sdk_context: SDKContext):
     async def validate_chat_data(chat_data):
@@ -60,15 +72,10 @@ def setup_chat_routes(router: APIRouter, id, sdk_context: SDKContext):
 
         stored_files = await insert_files_to_index(files, id, sdk_context)
 
-        attributes = sdk_context.get_attributes(
-            id, "llm", "agent_class", "tools", "instruction", "tool_retriever", "enable_multi_modal"
-        )
-        llm_instance = attributes["agent_class"](
-            attributes["llm"], attributes["tools"], attributes["instruction"], attributes["tool_retriever"]
-        ).agent
+        llm_instance,enable_multi_modal = get_llm_instance(id,sdk_context)
 
         chat_manager = ChatManager(
-            llm_instance, user_id=user_id, session_id=session_id, enable_multi_modal=attributes["enable_multi_modal"]
+            llm_instance, user_id=user_id, session_id=session_id, enable_multi_modal=enable_multi_modal
         )
         db_manager = DatabaseManager(db)
 
@@ -87,10 +94,7 @@ def setup_chat_routes(router: APIRouter, id, sdk_context: SDKContext):
         db: AsyncSession = Depends(get_db),
     ):
 
-        attributes = sdk_context.get_attributes(id, "llm", "agent_class", "tools", "instruction", "tool_retriever")
-        llm_instance = attributes["agent_class"](
-            attributes["llm"], attributes["tools"], attributes["instruction"], attributes["tool_retriever"]
-        ).agent
+        llm_instance,enable_multi_modal = get_llm_instance(id,sdk_context)
 
         chat_manager = ChatManager(llm_instance, user_id=user_id, session_id=session_id)
         db_manager = DatabaseManager(db)
@@ -115,10 +119,7 @@ def setup_chat_routes(router: APIRouter, id, sdk_context: SDKContext):
     @router.get("/all_chats")
     async def get_all_chats(user_id: str = Query(...), db: AsyncSession = Depends(get_db)):
 
-        attributes = sdk_context.get_attributes(id, "llm", "agent_class", "tools", "instruction", "tool_retriever")
-        llm_instance = attributes["agent_class"](
-            attributes["llm"], attributes["tools"], attributes["instruction"], attributes["tool_retriever"]
-        ).agent
+        llm_instance,enable_multi_modal = get_llm_instance(id,sdk_context)
 
         chat_manager = ChatManager(llm_instance, user_id=user_id, session_id="")
         db_manager = DatabaseManager(db)
