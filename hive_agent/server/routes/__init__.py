@@ -28,7 +28,7 @@ def setup_routes(app: FastAPI, id: str,sdk_context: SDKContext):
 
     @app.get("/")
     def read_root():
-        return "Hive Agent is running"
+        return {"message": "Hive Agent is running"}
 
     v1 = APIRouter()
 
