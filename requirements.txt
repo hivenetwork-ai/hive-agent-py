@@ -2,8 +2,7 @@ fastapi==0.115.0
 uvicorn==0.30.6
 python-dotenv==1.0.1
 toml==0.10.2
-#llama-index==0.11.10
-llama-index @ git+https://github.com/ToJen/llama_index.git@patch-2
+llama-index==0.11.10
 web3==7.2.0
 py-solc-x==2.0.3
 eth-account==0.13.3
