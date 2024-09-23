@@ -312,18 +312,15 @@ if __name__ == "__main__":
     [1] send a request:
 
     ```
-    curl --location 'localhost:8000/api/v1/chat' \
-    --header 'Content-Type: application/json' \
-    --data '{
-        "user_id": "user123",
-        "session_id": "session123",
-        "chat_data": {
-            "messages": [
-                { "role": "user", "content": "Which endpoints should I call to create vector index?" }
-            ]
-        }
-    }'
-````
+    curl --request POST \
+    --url http://localhost:8000/api/v1/chat \
+    --header 'Content-Type: multipart/form-data' \
+    --form 'user_id="test"' \
+    --form 'session_id="test"' \
+    --form 'chat_data={ "messages": [ { "role": "user", "content": "What is in these images?" } ] }' \
+    --form 'files=@/path/to/your/image1.png' \
+    --form 'files=@/path/to/your/image2.png'
+```
 
 ### Tutorial
 
@@ -406,4 +403,4 @@ Open [http://localhost:8000/docs](http://localhost:8000/docs) with your browser 
 
 ## Learn More
 
-<https://hivenetwork.ai>
+<https://swarmzero.ai>
