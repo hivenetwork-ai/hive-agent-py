@@ -1,12 +1,13 @@
+import json
+from io import BytesIO
+from unittest.mock import ANY, AsyncMock, MagicMock, patch
+
 import pytest
 from fastapi import APIRouter, FastAPI, status
-from httpx import AsyncClient
-from unittest.mock import AsyncMock, patch, MagicMock
-from io import BytesIO
-
-from llama_index.core.llms import ChatMessage, MessageRole
-from hive_agent.server.routes.chat import setup_chat_routes
 from hive_agent.sdk_context import SDKContext
+from hive_agent.server.routes.chat import setup_chat_routes
+from httpx import AsyncClient
+from llama_index.core.llms import ChatMessage, MessageRole
 
 
 class MockAgent:
@@ -33,7 +34,8 @@ def sdk_context():
         'agent_class': lambda *args: MagicMock(agent=MockAgent()),
         'tools': [],
         'instruction': "",
-        'tool_retriever': None
+        'tool_retriever': None,
+        'enable_multi_modal': False
     }
     return mock_context
 
@@ -55,81 +57,59 @@ async def client(app):
 
 @pytest.mark.asyncio
 async def test_chat_no_messages(client):
-    payload = {"user_id": "user1", "session_id": "session1", "chat_data": {"messages": []}, "media_references": []}
-    response = await client.post("/api/v1/chat", json=payload)
+    form_data = {
+        "user_id": "user1",
+        "session_id": "session1",
+        "chat_data": json.dumps({"messages": []}),
+    }
+    response = await client.post(
+        "/api/v1/chat",
+        data=form_data,
+        files={}
+    )
     assert response.status_code == status.HTTP_400_BAD_REQUEST
     assert "No messages provided" in response.json()["detail"]
 
 
 @pytest.mark.asyncio
 async def test_chat_last_message_not_user(client):
-    payload = {
+    form_data = {
         "user_id": "user1",
         "session_id": "session1",
-        "chat_data": {
+        "chat_data": json.dumps({
             "messages": [
                 {"role": MessageRole.SYSTEM, "content": "System message"},
                 {"role": MessageRole.USER, "content": "User message"},
                 {"role": MessageRole.SYSTEM, "content": "Another system message"},
             ]
-        },
-        "media_references": [],
+        }),
     }
-    response = await client.post("/api/v1/chat", json=payload)
+
+    response = await client.post(
+        "/api/v1/chat",
+        data=form_data,
+        files={}
+    )
     assert response.status_code == status.HTTP_400_BAD_REQUEST
     assert "Last message must be from user" in response.json()["detail"]
 
 
 @pytest.mark.asyncio
-async def test_chat_success(client, agent):
-    mock_chat_manager = AsyncMock()
-    mock_chat_manager.generate_response.return_value = "chat response"
-
-    with patch("hive_agent.server.routes.chat.ChatManager", return_value=mock_chat_manager), \
-         patch("hive_agent.server.routes.chat.inject_additional_attributes", new=lambda f, _: f()):
-        payload = {
-            "user_id": "user1",
-            "session_id": "session1",
-            "chat_data": {"messages": [{"role": MessageRole.USER, "content": "Hello!"}]},
-            "media_references": [],
-        }
-        response = await client.post("/api/v1/chat", json=payload)
-        assert response.status_code == status.HTTP_200_OK
-        assert response.text == "chat response" or response.text == '"chat response"'
-
-
-@pytest.mark.asyncio
-async def test_chat_media_no_files(client):
-    payload = {
-        "user_id": "user1",
-        "session_id": "session1",
-        "chat_data": '{"messages":[{"role": "USER", "content": "Hello!"}]}',
-    }
-    response = await client.post("/api/v1/chat_media", data=payload)
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
-
-
-@pytest.mark.asyncio
-async def test_chat_media_malformed_chat_data(client):
+async def test_chat_malformed_chat_data(client):
     payload = {"user_id": "user1", "session_id": "session1", "chat_data": "invalid_json"}
     files = [("files", ("test.txt", BytesIO(b"test content"), "text/plain"))]
 
-    response = await client.post("/api/v1/chat_media", data=payload, files={**dict(files)})
+    response = await client.post("/api/v1/chat", data=payload, files={**dict(files)})
 
     assert response.status_code == status.HTTP_400_BAD_REQUEST
     assert "Chat data is malformed" in response.json()["detail"]
 
 
 @pytest.mark.asyncio
-async def test_chat_media_success(client, agent):
-    mock_chat_manager = AsyncMock()
-    mock_chat_manager.generate_response.return_value = "chat response"
-
-    with patch("hive_agent.server.routes.chat.ChatManager", return_value=mock_chat_manager), \
-         patch("hive_agent.server.routes.chat.file_store.save_file", new_callable=AsyncMock) as mock_save_file, \
-         patch("hive_agent.server.routes.chat.inject_additional_attributes", new=lambda f, _: f()):
-
-        mock_save_file.return_value = "file_path.txt"
+async def test_chat_success(client, agent):
+    with patch("hive_agent.server.routes.chat.ChatManager.generate_response", return_value="chat response"), \
+         patch('hive_agent.server.routes.chat.insert_files_to_index', return_value=['test.txt']), \
+         patch("hive_agent.server.routes.chat.inject_additional_attributes", new=lambda fn, attributes=None: fn()):
 
         payload = {
             "user_id": "user1",
@@ -139,10 +119,37 @@ async def test_chat_media_success(client, agent):
 
         files = [("files", ("test.txt", BytesIO(b"test content"), "text/plain"))]
 
-        response = await client.post("/api/v1/chat_media", data=payload, files={**dict(files)})
+        response = await client.post("/api/v1/chat", data=payload, files={**dict(files)})
 
         assert response.status_code == status.HTTP_200_OK
         assert response.text == "chat response" or response.text == '"chat response"'
+
+
+@pytest.mark.asyncio
+async def test_chat_with_image(client, agent):
+    with patch("hive_agent.server.routes.chat.ChatManager.generate_response", return_value="chat response") \
+         as mock_generate_response, \
+         patch('hive_agent.server.routes.chat.insert_files_to_index', return_value=['test.txt', 'test.jpg']), \
+         patch("hive_agent.server.routes.chat.inject_additional_attributes", new=lambda fn, attributes=None: fn()):
+
+        payload = {
+            "user_id": "user1",
+            "session_id": "session1",
+            "chat_data": '{"messages":[{"role": "user", "content": "Hello!"}]}',
+        }
+
+        files = [("files", ("test.txt", BytesIO(b"test content"), "text/plain")),
+                 ("files", ("test.jpg", BytesIO(b"test content"), "image/jpg"))]
+
+        response = await client.post("/api/v1/chat", data=payload, files={**dict(files)})
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.text == "chat response" or response.text == '"chat response"'
+        mock_generate_response.assert_called_once_with(
+            ANY,
+            ANY,
+            ['test.jpg']
+        )
 
 
 @pytest.mark.asyncio

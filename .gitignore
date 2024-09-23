@@ -5,6 +5,7 @@ storage
 .env
 venv
 .venv
+.coverage
 
 **/*.egg-info
 build

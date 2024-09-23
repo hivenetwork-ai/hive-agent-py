@@ -1,14 +1,11 @@
 import os
 import signal
-import pytest
-
 from unittest.mock import MagicMock, patch
 
+import pytest
 from hive_agent.agent import HiveAgent
 from hive_agent.tools.retriever.base_retrieve import IndexStore
 from llama_index.core.agent.runner.base import AgentRunner
-from hive_agent.tools.agent_db import get_db_schemas, text_2_sql
-from llama_index.core.objects import ObjectIndex
 
 
 @pytest.fixture
@@ -91,7 +88,7 @@ def test_server_setup_exception(agent):
 
 
 def test_openai_agent_initialization_exception(agent):
-    with patch("hive_agent.agent.OpenAIAgent.from_tools") as mock_from_tools:
+    with patch("llama_index.agent.openai.OpenAIAgent.from_tools") as mock_from_tools:
         mock_from_tools.side_effect = Exception("Failed to initialize OpenAI agent")
         with pytest.raises(Exception):
             agent._HiveAgent__setup()

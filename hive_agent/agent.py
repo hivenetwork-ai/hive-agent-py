@@ -1,41 +1,36 @@
 import asyncio
 import importlib.util
 import logging
+import os
 import signal
 import subprocess
 import sys
+import uuid
+from typing import TYPE_CHECKING, Callable, List, Optional
+
 import uvicorn
-import os
-
-from typing import Callable, List, Optional, TYPE_CHECKING, Dict
-
+from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-
-from llama_index.agent.openai import OpenAIAgent  # type: ignore   # noqa
-from llama_index.core.agent import FunctionCallingAgentWorker, AgentRunner  # noqa
-from llama_index.core.llms import ChatMessage, MessageRole
-from llama_index.core.objects import ObjectIndex
-from llama_index.core.tools import QueryEngineTool, ToolMetadata
-
 from hive_agent.chat import ChatManager
-from hive_agent.llms.llm import LLM
-from hive_agent.llms.openai import OpenAIMultiModalLLM, OpenAILLM
 from hive_agent.llms.claude import ClaudeLLM
+from hive_agent.llms.llm import LLM
 from hive_agent.llms.mistral import MistralLLM
 from hive_agent.llms.ollama import OllamaLLM
+from hive_agent.llms.openai import OpenAILLM, OpenAIMultiModalLLM
 from hive_agent.llms.utils import llm_from_config
 from hive_agent.sdk_context import SDKContext
 from hive_agent.server.models import ToolInstallRequest
-from hive_agent.server.routes import setup_routes, files
+from hive_agent.server.routes import files, setup_routes
 from hive_agent.tools.agent_db import get_db_schemas, text_2_sql
-from hive_agent.tools.retriever.base_retrieve import RetrieverBase, IndexStore, supported_exts, index_base_dir
+from hive_agent.tools.retriever.base_retrieve import IndexStore, RetrieverBase, index_base_dir, supported_exts
 from hive_agent.tools.retriever.chroma_retrieve import ChromaRetriever
 from hive_agent.tools.retriever.pinecone_retrieve import PineconeRetriever
 from hive_agent.utils import tools_from_funcs
-
-from dotenv import load_dotenv
-import uuid
+from llama_index.core.agent import AgentRunner  # noqa
+from llama_index.core.llms import ChatMessage, MessageRole
+from llama_index.core.objects import ObjectIndex
+from llama_index.core.tools import QueryEngineTool, ToolMetadata
 
 load_dotenv()
 
@@ -52,24 +47,25 @@ class HiveAgent:
     __agent: AgentRunner
 
     def __init__(
-            self,
-            name: str,
-            functions: List[Callable],
-            llm: Optional[LLM] = None,
-            config_path="./hive_config_example.toml",
-            host="0.0.0.0",
-            port=8000,
-            instruction="",
-            role="",
-            description="",
-            agent_id=os.getenv("HIVE_AGENT_ID", ""),
-            retrieve=False,
-            required_exts=supported_exts,
-            retrieval_tool="basic",
-            load_index_file=False,
-            swarm_mode=False,
-            chat_only_mode=False,
-            sdk_context: Optional[SDKContext] = None
+        self,
+        name: str,
+        functions: List[Callable],
+        llm: Optional[LLM] = None,
+        config_path="./hive_config_example.toml",
+        host="0.0.0.0",
+        port=8000,
+        instruction="",
+        role="",
+        description="",
+        agent_id=os.getenv("HIVE_AGENT_ID", ""),
+        retrieve=False,
+        required_exts=supported_exts,
+        retrieval_tool="basic",
+        load_index_file=False,
+        swarm_mode=False,
+        chat_only_mode=False,
+        sdk_context: Optional[SDKContext] = None,
+        max_iterations: Optional[int] = 10
     ):
         self.id = agent_id if agent_id != "" else str(uuid.uuid4())
         self.name = name
@@ -85,7 +81,7 @@ class HiveAgent:
         self.sdk_context = sdk_context if sdk_context is not None else SDKContext(config_path=config_path)
         self.__config = self.sdk_context.get_config(self.name)
         self.__llm = llm if llm is not None else None
-
+        self.max_iterations = max_iterations
         self.__optional_dependencies: dict[str, bool] = {}
         self.__swarm_mode = swarm_mode
         self.__chat_only_mode = chat_only_mode
@@ -191,19 +187,14 @@ class HiveAgent:
             logging.error(f"An error occurred in the main event loop: {e}", exc_info=True)
 
     async def chat(
-            self,
-            prompt: str,
-            user_id="default_user",
-            session_id="default_chat",
+        self,
+        prompt: str,
+        user_id="default_user",
+        session_id="default_chat",
     ):
         chat_manager = ChatManager(self.__agent, user_id=user_id, session_id=session_id)
         last_message = ChatMessage(role=MessageRole.USER, content=prompt)
-        response = await chat_manager.generate_response(
-            db_manager=None,
-            messages=[],
-            last_message=last_message,
-            image_document_paths=[]
-        )
+        response = await chat_manager.generate_response(db_manager=None, last_message=last_message)
         return response
 
     def chat_history(self) -> List[ChatMessage]:
@@ -276,21 +267,7 @@ class HiveAgent:
 
     def get_tools(self):
 
-        custom_tools = tools_from_funcs(self.functions)
-
-        self.sdk_context.load_default_utility()
-
-        def _text_2_sql(query: str):
-            return text_2_sql(self.sdk_context, query)
-
-        def _get_db_schemas():
-            return get_db_schemas(self.sdk_context)
-
-        system_tools = tools_from_funcs([
-            _text_2_sql,
-            _get_db_schemas
-        ])
-        tools = custom_tools + system_tools
+        tools = tools_from_funcs(self.functions)
 
         return tools
 
@@ -307,11 +284,14 @@ class HiveAgent:
                 query_engine_tools.append(
                     QueryEngineTool(
                         query_engine=index_store.get_index(index_name).as_query_engine(),
-                        metadata=ToolMetadata(name=index_name + '_tool',
-                                              description=("Useful for questions related to specific aspects of "
-                                                           "documents"
-                                                           f" {index_files}")
-                                              )))
+                        metadata=ToolMetadata(
+                            name=index_name + "_tool",
+                            description=(
+                                "Useful for questions related to specific aspects of " "documents" f" {index_files}"
+                            ),
+                        ),
+                    )
+                )
 
             tools = tools + query_engine_tools
 
@@ -340,9 +320,13 @@ class HiveAgent:
                 tools=tools,
                 tool_retriever=tool_retriever,
                 agent_class=agent_class,
-                instruction=self.instruction
+                instruction=self.instruction,
+                max_iterations=self.max_iterations
             )
-            self.__agent = agent_class(llm, tools, self.instruction, tool_retriever).agent
+            if agent_class == OpenAIMultiModalLLM:
+                self.__agent = agent_class(llm, tools, self.instruction, tool_retriever, max_iterations=self.max_iterations).agent
+            else:
+                self.__agent = agent_class(llm, tools, self.instruction, tool_retriever).agent
 
         else:
             model = self.__config.get("model")
@@ -368,10 +352,14 @@ class HiveAgent:
                 tools=tools,
                 tool_retriever=tool_retriever,
                 agent_class=agent_class,
-                instruction=self.instruction
+                instruction=self.instruction,
+                enable_multi_modal=enable_multi_modal,
+                max_iterations=self.max_iterations
             )
-
-            self.__agent = agent_class(llm, tools, self.instruction, tool_retriever).agent
+            if agent_class == OpenAIMultiModalLLM:
+                self.__agent = agent_class(llm, tools, self.instruction, tool_retriever, max_iterations=self.max_iterations).agent
+            else:
+                self.__agent = agent_class(llm, tools, self.instruction, tool_retriever).agent
 
     def add_tool(self, function_tool):
         self.functions.append(function_tool)

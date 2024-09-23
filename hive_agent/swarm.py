@@ -39,7 +39,8 @@ class HiveSwarm:
         agents: List[HiveAgent] = None,
         config_path="./hive_config_example.toml",
         swarm_id=os.getenv("HIVE_SWARM_ID", ""),
-        sdk_context: Optional[SDKContext] = None
+        sdk_context: Optional[SDKContext] = None,
+        max_iterations: Optional[int] = 10
     ):
         self.id = swarm_id if swarm_id != "" else str(uuid.uuid4())
         self.name = name
@@ -50,6 +51,7 @@ class HiveSwarm:
         self.sdk_context = sdk_context if sdk_context is not None else SDKContext(config_path=config_path)
         self.__config = self.sdk_context.get_config(self.name)
         self.__llm = llm if llm is not None else llm_from_config_without_agent(self.__config)
+        self.max_iterations = max_iterations
 
 
         agents = self.sdk_context.generate_agents_from_config()
@@ -90,6 +92,7 @@ class HiveSwarm:
             llm=llm_from_wrapper(self.__llm, self.__config),
             verbose=True,
             context=self.instruction,
+            max_iterations=self.max_iterations
         )
 
     def add_agent(self, agent: HiveAgent):

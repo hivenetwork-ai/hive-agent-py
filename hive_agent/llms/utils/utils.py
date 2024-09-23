@@ -1,31 +1,30 @@
-import os
 import logging
-from typing import Optional
+import os
+
 from dotenv import load_dotenv
 
 if "LANGTRACE_API_KEY" in os.environ:
-    from langtrace_python_sdk import langtrace
+    from langtrace_python_sdk import langtrace  # type: ignore # noqa
 
     langtrace.init(api_key=os.getenv("LANGTRACE_API_KEY"))
 
-from hive_agent.llms.llm import LLM
+from hive_agent.config import Config
 from hive_agent.llms.claude import ClaudeLLM
+from hive_agent.llms.llm import LLM
 from hive_agent.llms.mistral import MistralLLM
 from hive_agent.llms.ollama import OllamaLLM
 from hive_agent.llms.openai import OpenAILLM
-from hive_agent.config import Config
-
-from llama_index.llms.openai import OpenAI
 from llama_index.llms.anthropic import Anthropic
-from llama_index.llms.ollama import Ollama
 from llama_index.llms.mistralai import MistralAI
-from llama_index.core.settings import Settings
+from llama_index.llms.ollama import Ollama
+from llama_index.llms.openai import OpenAI
 from llama_index.multi_modal_llms.openai import OpenAIMultiModal
 
 load_dotenv()
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
 
 def _create_llm(llm_type: str, config: Config):
     timeout = config.get("timeout")
@@ -36,7 +35,7 @@ def _create_llm(llm_type: str, config: Config):
 
     if llm_type == "OpenAI":
         if model.startswith("gpt-4") and enable_multi_modal is True:
-            return OpenAIMultiModal(model, api_key=os.getenv("OPENAI_API_KEY"), max_new_tokens=300)
+            return OpenAIMultiModal(model, request_timeout=timeout, max_new_tokens=300)
         elif "gpt" in model:
             return OpenAI(model=model, request_timeout=timeout)
     elif llm_type == "Anthropic":
@@ -59,7 +58,7 @@ def _create_llm(llm_type: str, config: Config):
 
 
 # used when `llm` is provided in HiveAgent or HiveSwarm creation
-def llm_from_wrapper(llm_wrapper: LLM, config: Optional[Config]):
+def llm_from_wrapper(llm_wrapper: LLM, config: Config):
     if isinstance(llm_wrapper, OpenAILLM):
         return _create_llm("OpenAI", config)
     elif isinstance(llm_wrapper, ClaudeLLM):
@@ -92,16 +91,17 @@ def llm_from_config(config: Config):
     else:
         logger.info("Default OpenAI model selected")
         return _create_llm("OpenAI", config)
-    
+
+
 def llm_from_config_without_agent(config: Config):
     model = config.get("model")
     if "gpt" in model:
         logger.info("OpenAILLM selected")
         return OpenAILLM(llm=llm_from_config(config))
-    elif 'claude' in model:
+    elif "claude" in model:
         logger.info("ClaudeLLM selected")
         return ClaudeLLM(llm=llm_from_config(config))
-    elif 'llama' in model:
+    elif "llama" in model:
         logger.info("OllamaLLM selected")
         return OllamaLLM(llm=llm_from_config(config))
     elif any(keyword in model for keyword in ["mixtral", "mistral", "codestral"]):
@@ -111,12 +111,4 @@ def llm_from_config_without_agent(config: Config):
         logger.info("Default OpenAILLM selected")
         return OpenAILLM(llm=llm_from_config(config))
 
-        
     return llm_from_config(config)
-
-
-def init_llm_settings(config: Config):
-    Settings.llm = llm_from_config(config)
-    Settings.chunk_size = 1024
-    Settings.chunk_overlap = 20
-    logger.info("LLM settings initialized")

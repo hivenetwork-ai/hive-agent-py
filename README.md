@@ -156,17 +156,12 @@ my_agent.run()
 Finally, call the API endpoint, `/api/v1/chat`, to see the result:
 
 ```sh
-curl --location 'localhost:8000/api/v1/chat' \
---header 'Content-Type: application/json' \
---data '{
-    "user_id": "user123",
-    "session_id": "session123",
-    "chat_data": {
-        "messages": [
-            { "role": "user", "content": "Who is Satoshi Nakamoto?" }
-        ]
-    }
-}'
+curl --request POST \
+  --url http://localhost:8000/api/v1/chat \
+  --header 'Content-Type: multipart/form-data' \
+  --form 'user_id="test"' \
+  --form 'session_id="test"' \
+  --form 'chat_data={ "messages": [ { "role": "user", "content": "Who is Satoshi Nakamoto?" } ] }'
 ```
 
 ### Adding tools
@@ -216,17 +211,12 @@ if __name__ == "__main__":
     [1] send a request:
 
     ```
-    curl --location 'localhost:8000/api/v1/chat' \
-    --header 'Content-Type: application/json' \
-    --data '{
-        "user_id": "user123",
-        "session_id": "session123",
-        "chat_data": {
-            "messages": [
-                { "role": "user", "content": "Which address initiated this transaction - 0x5c504ed432cb51138bcf09aa5e8a410dd4a1e204ef84bfed1be16dfba1b22060?" }
-            ]
-        }
-    }'
+    curl --request POST \
+    --url http://localhost:8000/api/v1/chat \
+    --header 'Content-Type: multipart/form-data' \
+    --form 'user_id="test"' \
+    --form 'session_id="test"' \
+    --form 'chat_data={ "messages": [ { "role": "user", "content": "Who is the sender of this transaction - 0x5c504ed432cb51138bcf09aa5e8a410dd4a1e204ef84bfed1be16dfba1b22060" } ] }'
     ```
 
     [2] result:
@@ -312,17 +302,14 @@ if __name__ == "__main__":
     [1] send a request:
 
     ```
-    curl --location 'localhost:8000/api/v1/chat' \
-    --header 'Content-Type: application/json' \
-    --data '{
-        "user_id": "user123",
-        "session_id": "session123",
-        "chat_data": {
-            "messages": [
-                { "role": "user", "content": "Which endpoints should I call to create vector index?" }
-            ]
-        }
-    }'
+    curl --request POST \
+    --url http://localhost:8000/api/v1/chat \
+    --header 'Content-Type: multipart/form-data' \
+    --form 'user_id="test"' \
+    --form 'session_id="test"' \
+    --form 'chat_data={ "messages": [ { "role": "user", "content": "Can you summarise the documents?" } ] }'
+    ```
+    """
 ````
 
 ### Tutorial
@@ -406,4 +393,4 @@ Open [http://localhost:8000/docs](http://localhost:8000/docs) with your browser 
 
 ## Learn More
 
-<https://hivenetwork.ai>
+<https://swarmzero.ai>
