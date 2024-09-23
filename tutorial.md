@@ -25,7 +25,7 @@ The request body should be sent as multipart/form-data and include the following
 
 ```bash
 curl --request POST \
-  --url http://localhost:8000/api/v1/chat_media \
+  --url http://localhost:8000/api/v1/chat \
   --header 'Content-Type: multipart/form-data' \
   --form 'user_id="test"' \
   --form 'session_id="test"' \
