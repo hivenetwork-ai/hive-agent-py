@@ -1,12 +1,9 @@
-import json
 import unittest
-
 from unittest.mock import AsyncMock, patch
 
+from hive_agent.database.database import DatabaseManager
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.ext.declarative import declarative_base
-
-from hive_agent.database.database import DatabaseManager
 
 Base = declarative_base()
 
@@ -61,7 +58,7 @@ class TestDatabaseManager(unittest.IsolatedAsyncioTestCase):
         db_manager.db = mock_session
 
         # Test valid case
-        table_definition = json.dumps({"name": "String", "age": "Integer"})
+        table_definition = {"name": "String", "age": "Integer"}
         db_manager.get_table_definition = AsyncMock(return_value=table_definition)
         data = {"name": "John", "age": 30}
         await db_manager.insert_data("users", data)
@@ -116,7 +113,7 @@ class TestDatabaseManager(unittest.IsolatedAsyncioTestCase):
         db_manager.db = mock_session
 
         # Test valid case
-        table_definition = json.dumps({"name": "String", "age": "Integer"})
+        table_definition = {"name": "String", "age": "Integer"}
         db_manager.get_table_definition = AsyncMock(return_value=table_definition)
         mock_instance = AsyncMock(name="John", age=30)
         db_manager.db.get.return_value = mock_instance
@@ -144,7 +141,7 @@ class TestDatabaseManager(unittest.IsolatedAsyncioTestCase):
         db_manager.db = mock_session
 
         # Test valid case
-        table_definition = json.dumps({"name": "String", "age": "Integer"})
+        table_definition = {"name": "String", "age": "Integer"}
         db_manager.get_table_definition = AsyncMock(return_value=table_definition)
         mock_instance = AsyncMock()
         db_manager.db.get.return_value = mock_instance

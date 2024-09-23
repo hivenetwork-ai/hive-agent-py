@@ -139,6 +139,10 @@ class HiveAgent:
         self.__configure_cors()
         setup_routes(self.__app, self.id, self.sdk_context)
 
+        @self.__app.get("/health")
+        def health():
+            return {"status": "healthy"}
+
         @self.__app.post("/api/v1/install_tools")
         async def install_tool(tools: List[ToolInstallRequest]):
             try:
