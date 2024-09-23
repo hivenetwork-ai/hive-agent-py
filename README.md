@@ -309,7 +309,8 @@ if __name__ == "__main__":
     --form 'session_id="test"' \
     --form 'chat_data={ "messages": [ { "role": "user", "content": "Can you summarise the documents?" } ] }'
     ```
-```
+    """
+````
 
 ### Tutorial
 
