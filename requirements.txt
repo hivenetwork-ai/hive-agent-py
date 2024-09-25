@@ -19,3 +19,4 @@ llama-index-vector-stores-pinecone==0.2.1
 llama-index-multi-modal-llms-openai==0.2.1
 chromadb==0.5.5
 asyncpg==0.29.0
+llama-index-llms-gemini==0.3.5

@@ -18,6 +18,7 @@ from hive_agent.llms.llm import LLM
 from hive_agent.llms.mistral import MistralLLM
 from hive_agent.llms.ollama import OllamaLLM
 from hive_agent.llms.openai import OpenAILLM, OpenAIMultiModalLLM
+from hive_agent.llms.gemini import GeminiLLM, GeminiMultiModalLLM
 from hive_agent.llms.utils import llm_from_config
 from hive_agent.sdk_context import SDKContext
 from hive_agent.server.models import ToolInstallRequest
@@ -343,6 +344,10 @@ class HiveAgent:
                 agent_class = OllamaLLM
             elif "mixtral" in model or "mistral" in model or "codestral" in model:
                 agent_class = MistralLLM
+            elif "gemini" in model and enable_multi_modal is True:
+                agent_class = GeminiMultiModalLLM
+            elif "gemini" in model:
+                agent_class = GeminiLLM
             else:
                 agent_class = OpenAILLM
 

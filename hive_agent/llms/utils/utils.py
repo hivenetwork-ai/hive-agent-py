@@ -14,11 +14,13 @@ from hive_agent.llms.llm import LLM
 from hive_agent.llms.mistral import MistralLLM
 from hive_agent.llms.ollama import OllamaLLM
 from hive_agent.llms.openai import OpenAILLM
+from hive_agent.llms.gemini import GeminiLLM
 from llama_index.llms.anthropic import Anthropic
 from llama_index.llms.mistralai import MistralAI
 from llama_index.llms.ollama import Ollama
 from llama_index.llms.openai import OpenAI
 from llama_index.multi_modal_llms.openai import OpenAIMultiModal
+from llama_index.llms.gemini import Gemini
 
 load_dotenv()
 
@@ -52,6 +54,12 @@ def _create_llm(llm_type: str, config: Config):
             logger.error("MISTRAL_API_KEY is missing")
             raise ValueError("MISTRAL_API_KEY is required for Mistral models")
         return MistralAI(model=model, api_key=api_key)
+    elif llm_type == "Gemini":
+        api_key = os.getenv("GEMINI_API_KEY")
+        if not api_key:
+            logger.error("GEMINI_API_KEY is missing")
+            raise ValueError("GEMINI_API_KEY is required for Gemini models")
+        return Gemini(model='models/'+model, api_key=api_key)
     else:
         logger.error("Unsupported LLM type")
         raise ValueError("Unsupported LLM type")
@@ -67,6 +75,8 @@ def llm_from_wrapper(llm_wrapper: LLM, config: Config):
         return _create_llm("Ollama", config)
     elif isinstance(llm_wrapper, MistralLLM):
         return _create_llm("Mistral", config)
+    elif isinstance(llm_wrapper, GeminiLLM):
+        return _create_llm("Gemini", config)
     else:
         logger.error("Unsupported LLM wrapper type")
         raise ValueError("Unsupported LLM wrapper type")
@@ -88,6 +98,9 @@ def llm_from_config(config: Config):
     elif any(keyword in model for keyword in ["mixtral", "mistral", "codestral"]):
         logger.info("Mistral model selected")
         return _create_llm("Mistral", config)
+    elif "gemini" in model:
+        logger.info("Gemini model selected")
+        return _create_llm("Gemini", config)
     else:
         logger.info("Default OpenAI model selected")
         return _create_llm("OpenAI", config)
@@ -107,6 +120,9 @@ def llm_from_config_without_agent(config: Config):
     elif any(keyword in model for keyword in ["mixtral", "mistral", "codestral"]):
         logger.info("MistralLLM selected")
         return MistralLLM(llm=llm_from_config(config))
+    elif "gemini" in model:
+        logger.info("GeminiLLM selected")
+        return GeminiLLM(llm=llm_from_config(config))
     else:
         logger.info("Default OpenAILLM selected")
         return OpenAILLM(llm=llm_from_config(config))
