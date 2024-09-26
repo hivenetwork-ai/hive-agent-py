@@ -1,5 +1,5 @@
 from llama_index.core.settings import Settings
-from llama_index.core.agent import FunctionCallingAgentWorker
+from llama_index.core.agent import ReActAgentWorker
 
 from hive_agent.llms.llm import LLM
 
@@ -8,7 +8,7 @@ class MistralLLM(LLM):
 
     def __init__(self, llm=None, tools=None, instruction="", tool_retriever=None):
         super().__init__(llm, tools, instruction, tool_retriever)
-        self.agent = FunctionCallingAgentWorker.from_tools(
+        self.agent = ReActAgentWorker.from_tools(
             tools=self.tools,
             system_prompt=self.system_prompt,
             llm=llm, 
