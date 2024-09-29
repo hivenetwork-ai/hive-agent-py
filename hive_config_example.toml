@@ -3,6 +3,13 @@ model = "gpt-4o"
 enable_multi_modal = false
 ollama_server_url = "http://localhost:11434"
 
+[sample_prompts]
+prompts = [
+  "What can you help me do?",
+  "Which tools do you have access to?",
+  "What are your capabilities?"
+]
+
 [environment]
 type = "dev"
 
@@ -15,3 +22,8 @@ timeout = 15
 environment = "dev"
 enable_multi_modal = true
 ollama_server_url = 'http://123.456.78.90:11434'
+sample_prompts = [
+    "What can you help me do?",
+    "Which tools do you have access to?",
+    "What are your capabilities?"
+]

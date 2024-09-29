@@ -312,7 +312,43 @@ if __name__ == "__main__":
     """
 ````
 
-### Tutorial
+
+### Adding Sample Prompts
+
+Users of your agent/swarm may not always be familiar with its abilities.
+Providing sample prompts allows them to explore what you have built.
+Here's how to add sample prompts which they can use before committing to use your agent/swarm.
+
+#### Default
+In your hive_config.toml file, create a **top level** entry called `[sample_prompts]` and add a new array to the key `prompts` like this:
+```toml
+[sample_prompts]
+prompts = [
+  "What can you help me do?",
+  "Which tools do you have access to?",
+  "What are your capabilities?"
+]
+```
+
+#### Specific agents in a swarm
+```toml
+[target_agent_id]
+model = "gpt-3.5-turbo"
+timeout = 15
+environment = "dev"
+enable_multi_modal = true
+ollama_server_url = 'http://123.456.78.90:11434'
+sample_prompts = [
+    "What can you help me do?",
+    "Which tools do you have access to?",
+    "What are your capabilities?"
+]
+```
+
+See [./hive_config_example.toml](./hive_config_example.toml) for an example configuration file.
+
+
+## Tutorial
 
 The complete tutorial can be found at [./tutorial.md](./tutorial.md).
 

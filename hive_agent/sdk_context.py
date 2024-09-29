@@ -51,6 +51,7 @@ class SDKContext:
             "log": self.config.get("log", "level", "INFO"),
             "ollama_server_url": self.config.get("model", "ollama_server_url", "http://localhost:11434"),
             "enable_multi_modal": self.config.get("model", "enable_multi_modal", False),
+            "sample_prompts": self.config.get("sample_prompts", "prompts", []),
         }
 
     def load_agent_configs(self):
@@ -73,6 +74,7 @@ class SDKContext:
                     "enable_multi_modal": self.config.get(
                         section, "enable_multi_modal", self.default_config["enable_multi_modal"]
                     ),
+                    "sample_prompts": self.config.get(section, "sample_prompts", self.default_config["sample_prompts"]),
                     "tools": self.config.get(section, "tools", []),
                     "instruction": self.config.get(section, "instruction", ""),
                 }
@@ -93,6 +95,7 @@ class SDKContext:
                     "enable_multi_modal": self.config.get(
                         section, "enable_multi_modal", self.default_config["enable_multi_modal"]
                     ),
+                    "sample_prompts": self.config.get(section, "sample_prompts", self.default_config["sample_prompts"]),
                     "tools": self.config.get(section, "tools", []),
                     "instruction": self.config.get(section, "instruction", ""),
                 }
