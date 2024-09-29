@@ -152,6 +152,11 @@ class HiveAgent:
             except Exception as e:
                 raise HTTPException(status_code=500, detail=str(e))
 
+        @self.__app.get("/api/v1/sample_prompts")
+        async def sample_prompts():
+            default_config = self.sdk_context.load_default_config()
+            return {"sample_prompts": default_config["sample_prompts"]}
+
         signal.signal(signal.SIGINT, self.__signal_handler)
         signal.signal(signal.SIGTERM, self.__signal_handler)
 
