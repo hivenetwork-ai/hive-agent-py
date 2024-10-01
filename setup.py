@@ -19,7 +19,11 @@ setup(
         "langtrace-python-sdk",
         "llama-index-vector-stores-chroma==0.2.0",
         "llama-index-vector-stores-pinecone==0.2.1",
-        "llama-index-multi-modal-llms-openai==0.2.1"
+        "llama-index-multi-modal-llms-openai==0.2.1",
+        "llama-index-readers-s3==0.2.0",
+        "openpyxl==3.1.5",
+        "docx2txt==0.8",
+        "xlrd==2.0.1"
     ],
     extras_require={
         "web3": ["web3==7.2.0", "py-solc-x==2.0.3", "eth-account==0.13.3"],
