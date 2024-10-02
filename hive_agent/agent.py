@@ -6,13 +6,15 @@ import signal
 import subprocess
 import sys
 import uuid
-from typing import TYPE_CHECKING, Callable, List, Optional
-
 import uvicorn
+
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from typing import TYPE_CHECKING, Callable, List, Optional
+
 from hive_agent.chat import ChatManager
+from hive_agent.database.database import get_db
 from hive_agent.llms.claude import ClaudeLLM
 from hive_agent.llms.llm import LLM
 from hive_agent.llms.mistral import MistralLLM
@@ -22,11 +24,12 @@ from hive_agent.llms.utils import llm_from_config
 from hive_agent.sdk_context import SDKContext
 from hive_agent.server.models import ToolInstallRequest
 from hive_agent.server.routes import files, setup_routes
-from hive_agent.tools.agent_db import get_db_schemas, text_2_sql
+# from hive_agent.tools.agent_db import get_db_schemas, text_2_sql
 from hive_agent.tools.retriever.base_retrieve import IndexStore, RetrieverBase, index_base_dir, supported_exts
 from hive_agent.tools.retriever.chroma_retrieve import ChromaRetriever
 from hive_agent.tools.retriever.pinecone_retrieve import PineconeRetriever
 from hive_agent.utils import tools_from_funcs
+
 from llama_index.core.agent import AgentRunner  # noqa
 from llama_index.core.llms import ChatMessage, MessageRole
 from llama_index.core.objects import ObjectIndex
@@ -196,11 +199,19 @@ class HiveAgent:
         prompt: str,
         user_id="default_user",
         session_id="default_chat",
+        image_document_paths: Optional[List[str]] = [],
     ):
-        chat_manager = ChatManager(self.__agent, user_id=user_id, session_id=session_id)
-        last_message = ChatMessage(role=MessageRole.USER, content=prompt)
-        response = await chat_manager.generate_response(db_manager=None, last_message=last_message)
-        return response
+        if self.__chat_only_mode is True:
+            await self.sdk_context.load_default_utility()
+
+        db_manager = self.sdk_context.get_utility("db_manager")
+
+        async for db in get_db():
+            db_manager.db = db
+            chat_manager = ChatManager(self.__agent, user_id=user_id, session_id=session_id)
+            last_message = ChatMessage(role=MessageRole.USER, content=prompt)
+            response = await chat_manager.generate_response(db_manager, last_message, image_document_paths)
+            return response
 
     def chat_history(self) -> List[ChatMessage]:
         return self.__agent.chat_history

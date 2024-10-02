@@ -114,8 +114,10 @@ class HiveSwarm:
         self._build_swarm()
 
     async def chat(self, prompt):
+        history = self.chat_history() if len(self.chat_history()) > 0 else []
         response = await self.__swarm.achat(
-            message=prompt
+            message=prompt,
+            chat_history=history,
         )
         return response
 
