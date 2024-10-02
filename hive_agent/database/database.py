@@ -24,7 +24,7 @@ if db_url.startswith("postgresql+asyncpg://"):
     connect_args = {"statement_cache_size": 0}
     poolclass = NullPool
 
-engine = create_async_engine(db_url, echo=True, connect_args=connect_args, poolclass=poolclass)
+engine = create_async_engine(db_url, echo=False, connect_args=connect_args, poolclass=poolclass)
 SessionLocal = sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)  # type: ignore
 Base = declarative_base()
 
@@ -43,7 +43,10 @@ async def initialize_db():
 
 async def get_db():
     async with SessionLocal() as session:
-        yield session
+        try:
+            yield session
+        finally:
+            await session.close()
 
 
 async def setup_chats_table(db: AsyncSession):
@@ -125,13 +128,14 @@ class DatabaseManager:
     async def get_table_definition(self, table_name: str):
         logger.info(f"Retrieving table definition for '{table_name}'")
         try:
-            result = await self.db.execute(select(TableDefinition).filter_by(table_name=table_name))
-            table_definition = result.scalars().first()
-            if table_definition:
-                logger.info(f"Table definition for '{table_name}' retrieved successfully.")
-                return table_definition.columns
-            logger.warning(f"Table definition for '{table_name}' not found.")
-            return None
+            async with SessionLocal() as session:
+                result = await session.execute(select(TableDefinition).filter_by(table_name=table_name))
+                table_definition = result.scalars().first()
+                if table_definition:
+                    logger.info(f"Table definition for '{table_name}' retrieved successfully.")
+                    return table_definition.columns
+                logger.warning(f"Table definition for '{table_name}' not found.")
+                return None
         except SQLAlchemyError as e:
             logger.error(f"Error retrieving table definition for '{table_name}': {str(e)}")
             raise ValueError(f"Error retrieving table definition: {str(e)}")

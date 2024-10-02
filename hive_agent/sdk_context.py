@@ -447,12 +447,12 @@ class SDKContext:
         :return: The requested utility function.
         """
 
-        if self.get_utility("text2sql_engine") is None:
-            engine = create_engine(db_url.replace("+aiosqlite", "").replace("+asyncpg", ""))
-            metadata = MetaData()
-            metadata.reflect(bind=engine)
-            self.add_utility(engine, utility_type="DBEngine", name="text2sql_engine")
-            self.add_utility(metadata, utility_type="MetaData", name="text2sql_metadata")
+        # if self.get_utility("text2sql_engine") is None:
+        #     engine = create_engine(db_url.replace("+aiosqlite", "").replace("+asyncpg", ""))
+        #     metadata = MetaData()
+        #     metadata.reflect(bind=engine)
+        #     self.add_utility(engine, utility_type="DBEngine", name="text2sql_engine")
+        #     self.add_utility(metadata, utility_type="MetaData", name="text2sql_metadata")
         if self.get_utility("db_manager") is None:
             await initialize_db()
             async for db in get_db():

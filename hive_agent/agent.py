@@ -104,6 +104,14 @@ class HiveAgent:
         self.sdk_context.add_resource(self, resource_type="agent")
         [self.sdk_context.add_resource(func, resource_type="tool") for func in self.functions]
 
+        self.__utilities_loaded = False
+
+    async def _ensure_utilities_loaded(self):
+        """Load utilities if they are not already loaded."""
+        if not self.__utilities_loaded and self.__chat_only_mode:
+            await self.sdk_context.load_default_utility()
+            self.__utilities_loaded = True
+
     def _check_optional_dependencies(self):
         try:
             from web3 import Web3  # noqa
@@ -201,20 +209,23 @@ class HiveAgent:
         session_id="default_chat",
         image_document_paths: Optional[List[str]] = [],
     ):
-        if self.__chat_only_mode is True:
-            await self.sdk_context.load_default_utility()
-
+        await self._ensure_utilities_loaded()
         db_manager = self.sdk_context.get_utility("db_manager")
 
-        async for db in get_db():
-            db_manager.db = db
-            chat_manager = ChatManager(self.__agent, user_id=user_id, session_id=session_id)
-            last_message = ChatMessage(role=MessageRole.USER, content=prompt)
-            response = await chat_manager.generate_response(db_manager, last_message, image_document_paths)
-            return response
+        chat_manager = ChatManager(self.__agent, user_id=user_id, session_id=session_id)
+        last_message = ChatMessage(role=MessageRole.USER, content=prompt)
 
-    def chat_history(self) -> List[ChatMessage]:
-        return self.__agent.chat_history
+        response = await chat_manager.generate_response(db_manager, last_message, image_document_paths)
+        return response
+
+    async def chat_history(self, user_id="default_user", session_id="default_chat") -> dict[str, list]:
+        await self._ensure_utilities_loaded()
+        db_manager = self.sdk_context.get_utility("db_manager")
+
+        chat_manager = ChatManager(self.__agent, user_id=user_id, session_id=session_id)
+
+        chats = await chat_manager.get_all_chats_for_user(db_manager)
+        return chats
 
     def query(self, *args, **kwargs):
         return self.__agent.query(*args, **kwargs)

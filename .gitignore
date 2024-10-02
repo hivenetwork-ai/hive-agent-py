@@ -3,6 +3,7 @@ __pycache__
 storage
 
 .env
+tests/.env
 venv
 .venv
 .coverage
