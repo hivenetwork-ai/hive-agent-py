@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Any, Optional
 
 from hive_agent.config import Config
-from hive_agent.database.database import DatabaseManager, db_url, get_db, initialize_db
+from hive_agent.database.database import DatabaseManager, db_url, get_db, initialize_db, setup_chats_table
 from sqlalchemy import MetaData, create_engine
 from sqlalchemy.sql import text as sql_text
 
@@ -261,7 +261,7 @@ class SDKContext:
         with open(file_path, "w") as f:
             json.dump(state, f, default=str, indent=4)
 
-    def load_sdk_context_json(self, file_path="sdk_context.json"):
+    async def load_sdk_context_json(self, file_path="sdk_context.json"):
         """
         Load the SDK context from a file and restore non-serializable objects.
 
@@ -277,7 +277,7 @@ class SDKContext:
             k: {"init_params": v, "object": None} if isinstance(v, dict) else v for k, v in self.resources.items()
         }
         self.utilities = {}
-        self.load_default_utility()
+        await self.load_default_utility()
         self.restore_non_serializable_objects()
         return self
 
@@ -383,7 +383,7 @@ class SDKContext:
                     for k, v in self.resources.items()
                 }
                 self.utilities = {}
-                self.load_default_utility()
+                await self.load_default_utility()
                 self.restore_non_serializable_objects()
                 return self
 
@@ -440,16 +440,23 @@ class SDKContext:
             return None
         return utility["object"]
 
-    def load_default_utility(self):
+    async def load_default_utility(self):
         """
         Load the default utility function from the context.
 
         :return: The requested utility function.
         """
 
-        if self.get_utility("text2sql_engine") is None:
-            engine = create_engine(db_url.replace("+aiosqlite", "").replace("+asyncpg", ""))
-            metadata = MetaData()
-            metadata.reflect(bind=engine)
-            self.add_utility(engine, utility_type="DBEngine", name="text2sql_engine")
-            self.add_utility(metadata, utility_type="MetaData", name="text2sql_metadata")
+        # if self.get_utility("text2sql_engine") is None:
+        #     engine = create_engine(db_url.replace("+aiosqlite", "").replace("+asyncpg", ""))
+        #     metadata = MetaData()
+        #     metadata.reflect(bind=engine)
+        #     self.add_utility(engine, utility_type="DBEngine", name="text2sql_engine")
+        #     self.add_utility(metadata, utility_type="MetaData", name="text2sql_metadata")
+        if self.get_utility("db_manager") is None:
+            await initialize_db()
+            async for db in get_db():
+                await setup_chats_table(db)
+                db_manager = DatabaseManager(db)
+                self.add_utility(db_manager, utility_type="DatabaseManager", name="db_manager")
+                break  # Exit after getting the first session

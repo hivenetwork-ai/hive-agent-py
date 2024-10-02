@@ -6,13 +6,15 @@ import signal
 import subprocess
 import sys
 import uuid
-from typing import TYPE_CHECKING, Callable, List, Optional
-
 import uvicorn
+
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from typing import TYPE_CHECKING, Callable, List, Optional
+
 from hive_agent.chat import ChatManager
+from hive_agent.database.database import get_db
 from hive_agent.llms.claude import ClaudeLLM
 from hive_agent.llms.llm import LLM
 from hive_agent.llms.mistral import MistralLLM
@@ -22,11 +24,12 @@ from hive_agent.llms.utils import llm_from_config
 from hive_agent.sdk_context import SDKContext
 from hive_agent.server.models import ToolInstallRequest
 from hive_agent.server.routes import files, setup_routes
-from hive_agent.tools.agent_db import get_db_schemas, text_2_sql
+# from hive_agent.tools.agent_db import get_db_schemas, text_2_sql
 from hive_agent.tools.retriever.base_retrieve import IndexStore, RetrieverBase, index_base_dir, supported_exts
 from hive_agent.tools.retriever.chroma_retrieve import ChromaRetriever
 from hive_agent.tools.retriever.pinecone_retrieve import PineconeRetriever
 from hive_agent.utils import tools_from_funcs
+
 from llama_index.core.agent import AgentRunner  # noqa
 from llama_index.core.llms import ChatMessage, MessageRole
 from llama_index.core.objects import ObjectIndex
@@ -100,6 +103,14 @@ class HiveAgent:
 
         self.sdk_context.add_resource(self, resource_type="agent")
         [self.sdk_context.add_resource(func, resource_type="tool") for func in self.functions]
+
+        self.__utilities_loaded = False
+
+    async def _ensure_utilities_loaded(self):
+        """Load utilities if they are not already loaded."""
+        if not self.__utilities_loaded and self.__chat_only_mode:
+            await self.sdk_context.load_default_utility()
+            self.__utilities_loaded = True
 
     def _check_optional_dependencies(self):
         try:
@@ -196,14 +207,25 @@ class HiveAgent:
         prompt: str,
         user_id="default_user",
         session_id="default_chat",
+        image_document_paths: Optional[List[str]] = [],
     ):
+        await self._ensure_utilities_loaded()
+        db_manager = self.sdk_context.get_utility("db_manager")
+
         chat_manager = ChatManager(self.__agent, user_id=user_id, session_id=session_id)
         last_message = ChatMessage(role=MessageRole.USER, content=prompt)
-        response = await chat_manager.generate_response(db_manager=None, last_message=last_message)
+
+        response = await chat_manager.generate_response(db_manager, last_message, image_document_paths)
         return response
 
-    def chat_history(self) -> List[ChatMessage]:
-        return self.__agent.chat_history
+    async def chat_history(self, user_id="default_user", session_id="default_chat") -> dict[str, list]:
+        await self._ensure_utilities_loaded()
+        db_manager = self.sdk_context.get_utility("db_manager")
+
+        chat_manager = ChatManager(self.__agent, user_id=user_id, session_id=session_id)
+
+        chats = await chat_manager.get_all_chats_for_user(db_manager)
+        return chats
 
     def query(self, *args, **kwargs):
         return self.__agent.query(*args, **kwargs)
