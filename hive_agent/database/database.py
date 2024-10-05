@@ -15,7 +15,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 os.makedirs("hive-agent-data/db", exist_ok=True)
-db_url = os.getenv("HIVE_AGENT_DATABASE_URL", "sqlite+aiosqlite:///hive-agent-data/db/hive_agent.db")
+db_url = os.getenv("HIVE_AGENT_DATABASE_URL") or "sqlite+aiosqlite:///hive-agent-data/db/hive_agent.db"
 
 poolclass = None
 connect_args = {}
