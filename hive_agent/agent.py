@@ -64,6 +64,7 @@ class HiveAgent:
         retrieve=False,
         required_exts=supported_exts,
         retrieval_tool="basic",
+        index_name : Optional[str] = None,
         load_index_file=False,
         swarm_mode=False,
         chat_only_mode=False,
@@ -91,6 +92,7 @@ class HiveAgent:
         self.retrieve = retrieve
         self.required_exts = required_exts
         self.retrieval_tool = retrieval_tool
+        self.index_name = index_name
         self.load_index_file = load_index_file
         logging.basicConfig(stream=sys.stdout, level=self.__config.get("log"))
         logging.getLogger().addHandler(logging.StreamHandler(stream=sys.stdout))
@@ -277,17 +279,26 @@ class HiveAgent:
 
         if "chroma" in self.retrieval_tool:
             chroma_retriever = ChromaRetriever()
-            index, file_names = chroma_retriever.create_index()
+            if self.index_name is not None:
+                index, file_names = chroma_retriever.create_index(collection_name=self.index_name)
+            else:
+                index, file_names = chroma_retriever.create_index()
             self.index_store.add_index(chroma_retriever.name, index, file_names)
 
         if "pinecone-serverless" in self.retrieval_tool:
             pinecone_retriever = PineconeRetriever()
-            index, file_names = pinecone_retriever.create_serverless_index()
+            if self.index_name is not None:
+                index, file_names = pinecone_retriever.create_serverless_index(collection_name=self.index_name)
+            else:
+                index, file_names = pinecone_retriever.create_serverless_index()
             self.index_store.add_index(pinecone_retriever.name, index, file_names)
 
         if "pinecone-pod" in self.retrieval_tool:
             pinecone_retriever = PineconeRetriever()
-            index, file_names = pinecone_retriever.create_pod_index()
+            if self.index_name is not None:
+                index, file_names = pinecone_retriever.create_pod_index(collection_name=self.index_name)
+            else:
+                index, file_names = pinecone_retriever.create_pod_index()
             self.index_store.add_index(pinecone_retriever.name, index, file_names)
 
             self.index_store.save_to_file()
