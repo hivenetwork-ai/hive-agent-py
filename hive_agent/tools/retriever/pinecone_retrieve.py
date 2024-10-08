@@ -34,7 +34,7 @@ class PineconeRetriever(RetrieverBase):
         folder_path=None,
         prefix='',
         bucket=None,
-        name="hive-agent-pinecone",
+        collection_name="hive-agent-pinecone",
         dimension=1536,
         metric="euclidean",
         cloud="aws",
@@ -45,12 +45,12 @@ class PineconeRetriever(RetrieverBase):
         else:
             documents, file_names = self._load_documents(file_path, folder_path)
         self.pinecone_client.create_index(
-            name=name,
+            name=collection_name,
             dimension=dimension,
             metric=metric,
             spec=ServerlessSpec(cloud=cloud, region=region),
         )
-        pinecone_index = self.pinecone_client.Index(name)
+        pinecone_index = self.pinecone_client.Index(collection_name)
 
         vector_store = PineconeVectorStore(pinecone_index=pinecone_index)
         storage_context = StorageContext.from_defaults(vector_store=vector_store)
@@ -65,7 +65,7 @@ class PineconeRetriever(RetrieverBase):
         folder_path=None,
         s3_endpoint_url=None,
         bucket=None,
-        name="hive-agent-pinecone-pod",
+        collection_name="hive-agent-pinecone-pod",
         dimension=1536,
         metric="cosine",
         environment="us-east1-gcp",
@@ -77,12 +77,12 @@ class PineconeRetriever(RetrieverBase):
         else:
             documents, file_names = self._load_documents(file_path, folder_path)
         self.pinecone_client.create_index(
-            name=name,
+            name=collection_name,
             dimension=dimension,
             metric=metric,
             spec=PodSpec(environment=environment, pod_type=pod_type, pods=pods),
         )
-        pinecone_index = self.pinecone_client.Index(name)
+        pinecone_index = self.pinecone_client.Index(collection_name)
 
         vector_store = PineconeVectorStore(pinecone_index=pinecone_index)
         storage_context = StorageContext.from_defaults(vector_store=vector_store)
