@@ -19,6 +19,7 @@ from llama_index.llms.mistralai import MistralAI
 from llama_index.llms.ollama import Ollama
 from llama_index.llms.openai import OpenAI
 from llama_index.multi_modal_llms.openai import OpenAIMultiModal
+from llama_index.llms.gemini import Gemini
 
 load_dotenv()
 
@@ -52,6 +53,13 @@ def _create_llm(llm_type: str, config: Config):
             logger.error("MISTRAL_API_KEY is missing")
             raise ValueError("MISTRAL_API_KEY is required for Mistral models")
         return MistralAI(model=model, api_key=api_key)
+    elif llm_type == "Gemini":
+        api_key = os.getenv("GEMINI_API_KEY")
+        if not api_key:
+            logger.error("GEMINI_API_KEY is missing")
+            raise ValueError("GEMINI_API_KEY is required for Gemini models")
+        else:
+            return Gemini(model='models/'+model, api_key=api_key)
     else:
         logger.error("Unsupported LLM type")
         raise ValueError("Unsupported LLM type")

@@ -25,6 +25,11 @@ Join our Discord community for support and discussion.
    - mistral-small-latest
    - open-mixtral-8x22b
    - codestral-latest
+- Gemini
+   - gemini-1.5-flash
+   - gemini-pro
+   - gemini-1.5-pro
+   - gemini-1.0-pro
 - Popular open source LLMs
    - llama3.1:latest
    - llava
