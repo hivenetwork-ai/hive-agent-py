@@ -6,6 +6,7 @@ from hive_agent.llms.openai import OpenAILLM, OpenAIMultiModalLLM
 from hive_agent.llms.claude import ClaudeLLM
 from hive_agent.llms.mistral import MistralLLM
 from hive_agent.llms.ollama import OllamaLLM
+from hive_agent.llms.gemini import GeminiLLM
 
 from llama_index.core.objects import ObjectIndex
 from llama_index.llms.openai import OpenAI
@@ -13,7 +14,7 @@ from llama_index.llms.anthropic import Anthropic
 from llama_index.llms.ollama import Ollama
 from llama_index.llms.mistralai import MistralAI
 from llama_index.multi_modal_llms.openai import OpenAIMultiModal
-
+from llama_index.llms.gemini import Gemini
 
 @pytest.fixture
 def tools():
@@ -86,6 +87,13 @@ def test_mistral_llm_initialization(tools, instruction):
     assert isinstance(mistral_llm.agent, llama_index.core.agent.runner.base.AgentRunner)
     assert mistral_llm.tools == tools
     assert instruction in mistral_llm.system_prompt
+
+def test_gemini_llm_initialization(tools, instruction):
+    gemini_llm = GeminiLLM(Gemini(model="gemini-1.5-flash"), tools, instruction)
+    assert gemini_llm.agent is not None
+    assert isinstance(gemini_llm.agent, llama_index.core.agent.runner.base.AgentRunner)
+    assert gemini_llm.tools == tools
+    assert instruction in gemini_llm.system_prompt
 
 
 def test_retrieval_openai_llm_initialization(empty_tools, instruction, tool_retriever):
