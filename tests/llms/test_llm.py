@@ -89,12 +89,12 @@ def test_mistral_llm_initialization(tools, instruction):
     assert instruction in mistral_llm.system_prompt
 
 def test_gemini_llm_initialization(tools, instruction):
-    gemini_llm = GeminiLLM(Gemini(model="models/gemini-1.5-flash"), tools, instruction)
-    assert gemini_llm.agent is not None
-    assert isinstance(gemini_llm.agent, llama_index.core.agent.runner.base.AgentRunner)
-    assert gemini_llm.tools == tools
-    assert instruction in gemini_llm.system_prompt
-
+    with patch('llama_index.llms.gemini.Gemini') as mock_gemini:
+        gemini_llm = GeminiLLM(mock_gemini.return_value, tools, instruction)
+        assert gemini_llm.agent is not None
+        assert isinstance(gemini_llm.agent, llama_index.core.agent.runner.base.AgentRunner)
+        assert gemini_llm.tools == tools
+        assert instruction in gemini_llm.system_prompt
 
 def test_retrieval_openai_llm_initialization(empty_tools, instruction, tool_retriever):
     openai_llm = OpenAILLM(OpenAI(model="gpt-3.5-turbo"), empty_tools, instruction, tool_retriever=tool_retriever)
