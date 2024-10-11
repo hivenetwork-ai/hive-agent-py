@@ -1,22 +1,25 @@
 import os
 import string
+import uuid
+
+from dotenv import load_dotenv
 from typing import List, Dict, Any, Optional, Callable
 
+from langtrace_python_sdk import inject_additional_attributes
 from llama_index.core.agent import AgentRunner, ReActAgent
 from llama_index.core.llms import ChatMessage, MessageRole
 from llama_index.core.tools import QueryEngineTool, ToolMetadata
 
 from hive_agent.agent import HiveAgent
 from hive_agent.chat import ChatManager
-from hive_agent.config import Config
 from hive_agent.llms.llm import LLM
 from hive_agent.llms.utils import llm_from_wrapper
 from hive_agent.utils import tools_from_funcs
 from hive_agent.sdk_context import SDKContext
 from hive_agent.llms.utils import llm_from_config_without_agent
 
-import uuid
 
+load_dotenv()
 
 class AgentMap(Dict[str, Dict[str, Any]]):
     def __init__(self):
@@ -128,7 +131,10 @@ class HiveSwarm:
         chat_manager = ChatManager(self.__swarm, user_id=user_id, session_id=session_id)
         last_message = ChatMessage(role=MessageRole.USER, content=prompt)
 
-        response = await chat_manager.generate_response(db_manager, last_message, image_document_paths)
+        response = await inject_additional_attributes(
+            lambda: chat_manager.generate_response(db_manager, last_message, image_document_paths),
+            {"user_id": user_id}
+        )
         return response
 
     async def chat_history(self, user_id="default_user", session_id="default_chat") -> dict[str, list]:

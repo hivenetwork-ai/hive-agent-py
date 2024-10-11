@@ -14,7 +14,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from typing import TYPE_CHECKING, Callable, List, Optional
 
 from hive_agent.chat import ChatManager
-from hive_agent.database.database import get_db
 from hive_agent.llms.claude import ClaudeLLM
 from hive_agent.llms.llm import LLM
 from hive_agent.llms.mistral import MistralLLM
@@ -24,11 +23,13 @@ from hive_agent.llms.utils import llm_from_config
 from hive_agent.sdk_context import SDKContext
 from hive_agent.server.models import ToolInstallRequest
 from hive_agent.server.routes import files, setup_routes
-# from hive_agent.tools.agent_db import get_db_schemas, text_2_sql
 from hive_agent.tools.retriever.base_retrieve import IndexStore, RetrieverBase, index_base_dir, supported_exts
 from hive_agent.tools.retriever.chroma_retrieve import ChromaRetriever
 from hive_agent.tools.retriever.pinecone_retrieve import PineconeRetriever
 from hive_agent.utils import tools_from_funcs
+
+from langtrace_python_sdk import \
+    inject_additional_attributes  # type: ignore   # noqa
 
 from llama_index.core.agent import AgentRunner  # noqa
 from llama_index.core.llms import ChatMessage, MessageRole
@@ -200,7 +201,13 @@ class HiveAgent:
     def run(self):
         try:
             loop = asyncio.get_event_loop()
-            loop.run_until_complete(self.run_server())
+            if loop.is_running():
+                logging.warning("Event loop already running, creating a new one.")
+                new_loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(new_loop)
+                new_loop.run_until_complete(self.run_server())
+            else:
+                loop.run_until_complete(self.run_server())
         except Exception as e:
             logging.error(f"An error occurred in the main event loop: {e}", exc_info=True)
 
@@ -217,7 +224,10 @@ class HiveAgent:
         chat_manager = ChatManager(self.__agent, user_id=user_id, session_id=session_id)
         last_message = ChatMessage(role=MessageRole.USER, content=prompt)
 
-        response = await chat_manager.generate_response(db_manager, last_message, image_document_paths)
+        response = await inject_additional_attributes(
+            lambda: chat_manager.generate_response(db_manager, last_message, image_document_paths),
+            {"user_id": user_id}
+        )
         return response
 
     async def chat_history(self, user_id="default_user", session_id="default_chat") -> dict[str, list]:

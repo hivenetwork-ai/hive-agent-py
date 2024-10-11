@@ -86,6 +86,7 @@ def setup_chat_routes(router: APIRouter, id, sdk_context: SDKContext):
 
         return await inject_additional_attributes(
             lambda: chat_manager.generate_response(db_manager, last_message, image_files),
+            {"user_id": user_id}
         )
 
     @router.get("/chat_history", response_model=List[ChatHistorySchema])
