@@ -32,6 +32,8 @@ asyncpg = "^0.29.0"
 openpyxl = "3.1.5"
 docx2txt = "0.8"
 xlrd = "2.0.1"
+boto3 = "1.35.38"
+types-boto3 = "1.0.2"
 
 [tool.poetry.extras]
 web3 = ["web3", "py-solc-x", "eth-account"]

@@ -1,4 +1,5 @@
 import logging
+import os
 from typing import List
 
 from fastapi import APIRouter, File, HTTPException, UploadFile
@@ -9,8 +10,11 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
+from dotenv import load_dotenv
 from hive_agent.sdk_context import SDKContext
 from hive_agent.tools.retriever.base_retrieve import IndexStore, RetrieverBase
+
+load_dotenv()
 
 ALLOWED_FILE_TYPES = [
     "application/json",
@@ -28,6 +32,7 @@ ALLOWED_FILE_TYPES = [
 file_store = FileStore(BASE_DIR)
 
 index_store = IndexStore.get_instance()
+USE_S3 = os.getenv("USE_S3", "false").lower() == "true"
 
 
 async def insert_files_to_index(files: List[UploadFile], id: str, sdk_context: SDKContext):
@@ -46,7 +51,10 @@ async def insert_files_to_index(files: List[UploadFile], id: str, sdk_context: S
         try:
             agent = sdk_context.get_resource(id)
             filename = await file_store.save_file(file)
-            file_path = "{BASE_DIR}/{filename}".format(BASE_DIR=BASE_DIR, filename=filename)
+            if USE_S3:
+                file_path = filename
+            else:
+                file_path = "{BASE_DIR}/{filename}".format(BASE_DIR=BASE_DIR, filename=filename)
             saved_files.append(file_path)
 
             if "BaseRetriever" in index_store.list_indexes():
