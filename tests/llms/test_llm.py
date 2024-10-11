@@ -89,7 +89,7 @@ def test_mistral_llm_initialization(tools, instruction):
     assert instruction in mistral_llm.system_prompt
 
 def test_gemini_llm_initialization(tools, instruction):
-    gemini_llm = GeminiLLM(Gemini(model="gemini-1.5-flash"), tools, instruction)
+    gemini_llm = GeminiLLM(Gemini(model="models/gemini-1.5-flash"), tools, instruction)
     assert gemini_llm.agent is not None
     assert isinstance(gemini_llm.agent, llama_index.core.agent.runner.base.AgentRunner)
     assert gemini_llm.tools == tools
