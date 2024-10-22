@@ -2,11 +2,12 @@ import os
 from datetime import datetime, timezone
 from typing import Any, List, Optional
 
-from hive_agent.database.database import DatabaseManager
 from llama_index.core.agent.runner.base import AgentRunner
 from llama_index.core.llms import ChatMessage, MessageRole
 from llama_index.core.memory import ChatMemoryBuffer
 from llama_index.core.schema import ImageDocument
+
+from hive_agent.database.database import DatabaseManager
 
 
 class ChatManager:
@@ -26,8 +27,10 @@ class ChatManager:
             "role": role,
             "timestamp": datetime.now(timezone.utc).isoformat(),
         }
-        if "HIVE_AGENT_ID" in os.environ:
-            data["agent_id"] = os.getenv("HIVE_AGENT_ID", "")
+        if "AGENT_ID" in os.environ:
+            data["agent_id"] = os.getenv("AGENT_ID", "")
+        if "SWARM_ID" in os.environ:
+            data["swarm_id"] = os.getenv("SWARM_ID", "")
 
         await db_manager.insert_data(
             table_name="chats",
@@ -36,12 +39,22 @@ class ChatManager:
 
     async def get_messages(self, db_manager: DatabaseManager):
         filters = {"user_id": [self.user_id], "session_id": [self.session_id]}
+        if "AGENT_ID" in os.environ:
+            filters["agent_id"] = os.getenv("AGENT_ID", "")
+        if "SWARM_ID" in os.environ:
+            filters["swarm_id"] = os.getenv("SWARM_ID", "")
+
         db_chat_history = await db_manager.read_data("chats", filters)
         chat_history = [ChatMessage(role=chat["role"], content=chat["message"]) for chat in db_chat_history]
         return chat_history
 
     async def get_all_chats_for_user(self, db_manager: DatabaseManager):
         filters = {"user_id": [self.user_id]}
+        if "AGENT_ID" in os.environ:
+            filters["agent_id"] = os.getenv("AGENT_ID", "")
+        if "SWARM_ID" in os.environ:
+            filters["swarm_id"] = os.getenv("SWARM_ID", "")
+
         db_chat_history = await db_manager.read_data("chats", filters)
 
         chats_by_session: dict[str, list] = {}
