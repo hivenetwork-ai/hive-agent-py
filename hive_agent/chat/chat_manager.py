@@ -39,10 +39,10 @@ class ChatManager:
 
     async def get_messages(self, db_manager: DatabaseManager):
         filters = {"user_id": [self.user_id], "session_id": [self.session_id]}
-        if "AGENT_ID" in os.environ:
-            filters["agent_id"] = os.getenv("AGENT_ID", "")
-        if "SWARM_ID" in os.environ:
-            filters["swarm_id"] = os.getenv("SWARM_ID", "")
+        if "HIVE_AGENT_ID" in os.environ:
+            filters["agent_id"] = os.getenv("HIVE_AGENT_ID", "")
+        if "HIVE_SWARM_ID" in os.environ:
+            filters["swarm_id"] = os.getenv("HIVE_SWARM_ID", "")
 
         db_chat_history = await db_manager.read_data("chats", filters)
         chat_history = [ChatMessage(role=chat["role"], content=chat["message"]) for chat in db_chat_history]
@@ -50,10 +50,10 @@ class ChatManager:
 
     async def get_all_chats_for_user(self, db_manager: DatabaseManager):
         filters = {"user_id": [self.user_id]}
-        if "AGENT_ID" in os.environ:
-            filters["agent_id"] = os.getenv("AGENT_ID", "")
-        if "SWARM_ID" in os.environ:
-            filters["swarm_id"] = os.getenv("SWARM_ID", "")
+        if "HIVE_AGENT_ID" in os.environ:
+            filters["agent_id"] = os.getenv("HIVE_AGENT_ID", "")
+        if "HIVE_SWARM_ID" in os.environ:
+            filters["swarm_id"] = os.getenv("HIVE_SWARM_ID", "")
 
         db_chat_history = await db_manager.read_data("chats", filters)
 
