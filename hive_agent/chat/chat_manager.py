@@ -27,10 +27,10 @@ class ChatManager:
             "role": role,
             "timestamp": datetime.now(timezone.utc).isoformat(),
         }
-        if "AGENT_ID" in os.environ:
-            data["agent_id"] = os.getenv("AGENT_ID", "")
-        if "SWARM_ID" in os.environ:
-            data["swarm_id"] = os.getenv("SWARM_ID", "")
+        if "HIVE_AGENT_ID" in os.environ:
+            data["agent_id"] = os.getenv("HIVE_AGENT_ID", "")
+        if "HIVE_SWARM_ID" in os.environ:
+            data["swarm_id"] = os.getenv("HIVE_SWARM_ID", "")
 
         await db_manager.insert_data(
             table_name="chats",
