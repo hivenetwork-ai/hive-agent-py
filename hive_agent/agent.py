@@ -326,6 +326,12 @@ class HiveAgent:
 
         if self.load_index_file or self.retrieve or len(self.index_store.list_indexes()) > 0:
             index_store = IndexStore.get_instance()
+            description = f"For questions related to documents: {index_files}"
+
+            # Ensure the description is within 1024 characters
+            if len(description) > 1024:
+                description = description[:1024]
+
             query_engine_tools = []
             for index_name in index_store.get_all_index_names():
                 index_files = index_store.get_index_files(index_name)
@@ -334,9 +340,7 @@ class HiveAgent:
                         query_engine=index_store.get_index(index_name).as_query_engine(),
                         metadata=ToolMetadata(
                             name=index_name + "_tool",
-                            description=(
-                                "Useful for questions related to specific aspects of " "documents" f" {index_files}"
-                            ),
+                            description=description,
                         ),
                     )
                 )
